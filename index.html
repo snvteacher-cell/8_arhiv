@@ -1,0 +1,1644 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Стиснення та архівування даних</title>
+<style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+
+/* Layout: a "desktop" with a taskbar of tabs; each tab is one lesson window, big type for projector */
+:root{
+  --bg:#eef2f7; --panel:#ffffff; --ink:#1b2433; --muted:#5b6678; --line:#d5dce7;
+  --sys:#2f6fe4; --sys-bg:#e3ecfd;
+  --app:#e0711d; --app-bg:#fdeedd;
+  --ins:#8a3fd1; --ins-bg:#f1e6fb;
+  --hw:#4d5a6d; --hw-bg:#e6eaf0;
+  --ok:#1f9d55; --ok-bg:#ddf5e7; --bad:#d23b3b; --bad-bg:#fbe3e3;
+  --bar:#1b2433; --bar-ink:#f3f6fb;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121822; --panel:#1b2330; --ink:#e9eef6; --muted:#9aa6b8; --line:#2d3848;
+  --sys:#6f9ff5; --sys-bg:#1d2c48; --app:#f29a4f; --app-bg:#3a2816; --ins:#b98af0; --ins-bg:#2e1f44;
+  --hw:#a6b2c4; --hw-bg:#252f3d; --ok:#4cc985; --ok-bg:#163a27; --bad:#f07272; --bad-bg:#43191c;
+  --bar:#0b0f16; --bar-ink:#e9eef6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121822; --panel:#1b2330; --ink:#e9eef6; --muted:#9aa6b8; --line:#2d3848;
+  --sys:#6f9ff5; --sys-bg:#1d2c48; --app:#f29a4f; --app-bg:#3a2816; --ins:#b98af0; --ins-bg:#2e1f44;
+  --hw:#a6b2c4; --hw-bg:#252f3d; --ok:#4cc985; --ok-bg:#163a27; --bad:#f07272; --bad-bg:#43191c;
+  --bar:#0b0f16; --bar-ink:#e9eef6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.05rem;line-height:1.55}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);font-weight:800}
+h2{font-size:clamp(1.25rem,3vw,1.7rem);font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0;max-width:65ch}
+button{font:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sys);outline-offset:2px}
+
+.taskbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);color:var(--bar-ink);
+  display:flex;gap:6px;align-items:center;padding:8px 16px;overflow-x:auto}
+.start{font-family:var(--display);font-weight:800;font-size:.85rem;padding:8px 12px;border-radius:8px;background:var(--sys);color:#fff;white-space:nowrap}
+.tab{border:0;background:transparent;color:var(--bar-ink);opacity:.75;padding:8px 12px;border-radius:8px;white-space:nowrap;font-weight:700}
+.tab[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.14);box-shadow:inset 0 -3px 0 var(--app)}
+.tab:hover{opacity:1}
+
+main{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:24px 48px}
+.win{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.win-head{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.dots{display:flex;gap:6px}.dots i{width:11px;height:11px;border-radius:50%;background:var(--line);display:block}
+.dots i:nth-child(1){background:var(--bad)}.dots i:nth-child(2){background:var(--app)}.dots i:nth-child(3){background:var(--ok)}
+.win-body{padding:24px clamp(16px,3vw,32px);display:grid;gap:22px}
+.lead{font-size:1.15rem;color:var(--muted)}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* definition */
+.def{border-left:5px solid var(--sys);background:var(--sys-bg);padding:16px 20px;border-radius:0 10px 10px 0;font-size:1.2rem;font-weight:700}
+.def b{color:var(--sys)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.pair>div{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:6px;min-width:0}
+.pair .tag{font-family:var(--mono);font-size:.8rem;font-weight:700}
+
+/* layered stack */
+.stack-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.stack-wrap{grid-template-columns:1fr}}
+.stack{display:grid;gap:8px}
+.layer{border:2px solid transparent;border-radius:12px;padding:14px 16px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:800;font-size:1.05rem;color:var(--ink)}
+.layer small{font-family:var(--mono);font-weight:500;font-size:.75rem;color:var(--muted)}
+.layer.user{background:var(--bg);border-color:var(--line);border-style:dashed}
+.layer.app{background:var(--app-bg);color:var(--ink)}
+.layer.sys{background:var(--sys-bg)}
+.layer.hw{background:var(--hw-bg)}
+.layer.ins{background:var(--ins-bg)}
+.layer[aria-pressed="true"]{border-color:var(--ink)}
+.layer.app[aria-pressed="true"]{border-color:var(--app)}.layer.sys[aria-pressed="true"]{border-color:var(--sys)}
+.layer.ins[aria-pressed="true"]{border-color:var(--ins)}.layer.hw[aria-pressed="true"]{border-color:var(--hw)}
+.info{border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px;min-height:220px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.9rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+
+.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.kind{border-radius:12px;padding:18px;display:grid;gap:8px;align-content:start;min-width:0}
+.kind.sys{background:var(--sys-bg)}.kind.app{background:var(--app-bg)}.kind.ins{background:var(--ins-bg)}
+.kind h3{font-size:1.1rem}
+.kind.sys h3{color:var(--sys)}.kind.app h3{color:var(--app)}.kind.ins h3{color:var(--ins)}
+.hint{font-size:.95rem;color:var(--muted)}
+
+/* sorting */
+.pool{display:flex;flex-wrap:wrap;gap:10px;min-height:64px;padding:12px;border:2px dashed var(--line);border-radius:12px}
+.card{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:10px;background:var(--panel);border:2px solid var(--line);font-weight:800;color:var(--ink);user-select:none}
+.card .mono{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--bg);font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--muted)}
+.card.sel{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 4px 0 var(--line)}
+.card.right{border-color:var(--ok);background:var(--ok-bg)}
+.card.wrong{border-color:var(--bad);background:var(--bad-bg);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.bins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.bins{grid-template-columns:1fr}}
+.bin{border-radius:12px;padding:12px;display:grid;gap:10px;align-content:start;min-height:180px;border:2px solid transparent;text-align:left;color:var(--ink)}
+.bin.sys{background:var(--sys-bg)}.bin.app{background:var(--app-bg)}.bin.ins{background:var(--ins-bg)}
+.bin.over{border-color:var(--ink)}
+.bin-title{font-family:var(--display);font-size:.95rem;font-weight:700;display:flex;justify-content:space-between}
+.bin.sys .bin-title{color:var(--sys)}.bin.app .bin-title{color:var(--app)}.bin.ins .bin-title{color:var(--ins)}
+.bin-items{display:flex;flex-wrap:wrap;gap:8px}
+.bar-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.score{font-family:var(--mono);font-weight:700;font-variant-numeric:tabular-nums}
+.btn{border:0;border-radius:10px;padding:10px 18px;font-weight:800;background:var(--ink);color:var(--panel)}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.toast{font-weight:700;min-height:1.6em}
+.toast.good{color:var(--ok)}.toast.bad{color:var(--bad)}
+
+/* quiz */
+.progress{height:8px;background:var(--bg);border-radius:99px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--sys);transition:width .3s}
+.q{font-family:var(--display);font-size:clamp(1.1rem,2.6vw,1.45rem);font-weight:700}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.opt{text-align:left;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-weight:700;font-size:1.05rem;display:flex;gap:12px;align-items:center}
+.opt .k{font-family:var(--mono);width:28px;height:28px;border-radius:6px;background:var(--bg);display:grid;place-items:center;flex:none;font-size:.85rem}
+.opt:hover:not(:disabled){border-color:var(--sys)}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.explain{padding:12px 16px;border-radius:10px;background:var(--bg)}
+.final{display:grid;gap:12px;justify-items:start}
+.big{font-family:var(--display);font-size:clamp(2.4rem,7vw,4rem);font-weight:800;font-variant-numeric:tabular-nums}
+
+/* odd one out */
+.odd{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.odd{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.odd button{padding:22px 10px;border-radius:14px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-weight:800;font-size:1.1rem;display:grid;gap:8px;justify-items:center}
+.odd button .mono{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:var(--bg);font-family:var(--mono);color:var(--muted)}
+.odd button:hover:not(:disabled){border-color:var(--ins)}
+.odd button.right{border-color:var(--ok);background:var(--ok-bg)}
+.odd button.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* truth or myth */
+.tm{display:grid;gap:10px}
+.tm-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.tm-row .btns{display:flex;gap:6px}
+.tm-row button{border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px;font-weight:800}
+.tm-row.done-ok{background:var(--ok-bg);border-color:var(--ok)}
+.tm-row.done-bad{background:var(--bad-bg);border-color:var(--bad)}
+.tm-row .why{grid-column:1/-1;font-size:.95rem;color:var(--muted)}
+@media (max-width:560px){.tm-row{grid-template-columns:1fr}}
+
+/* teacher plan */
+.plan{width:100%;border-collapse:collapse;font-size:.98rem}
+.plan th,.plan td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.plan th{font-family:var(--mono);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.plan td:first-child{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700}
+.tbl{overflow-x:auto}
+.note{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px}
+.note ul{margin:0;padding-left:1.2em}
+/* tree diagram */
+.tree-wrap{overflow-x:auto;padding-bottom:4px}
+.tree,.tree ul{list-style:none;margin:0;padding:0;display:flex;justify-content:center;position:relative}
+.tree ul{padding-top:22px}
+.tree li{flex:1 1 0;min-width:0;text-align:center;position:relative;padding:22px 5px 0}
+.tree>li{padding-top:0}
+.tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:22px;border-top:2px solid var(--muted)}
+.tree li::after{right:auto;left:50%;border-left:2px solid var(--muted)}
+.tree>li::before,.tree>li::after{display:none}
+.tree li:first-child::before,.tree li:last-child::after{border:0}
+.tree li:last-child::before{border-right:2px solid var(--muted);border-radius:0 8px 0 0}
+.tree li:first-child::after{border-radius:8px 0 0 0}
+.tree ul::before{content:"";position:absolute;top:0;left:50%;height:22px;border-left:2px solid var(--muted)}
+.node{border:2px solid transparent;border-radius:12px;padding:10px 12px;font-weight:800;font-size:1rem;line-height:1.25;color:var(--ink);display:inline-grid;gap:2px;max-width:100%;transition:transform .15s}
+.node:hover{transform:translateY(-2px)}
+.node small{font-family:var(--mono);font-weight:500;font-size:.78rem;color:var(--muted)}
+.node.root{background:var(--ink);color:var(--panel);font-family:var(--display);font-size:1.05rem;padding:12px 18px}
+.node.hw{background:var(--hw-bg);border-color:var(--hw);font-size:1.05rem}
+.node.sw{background:var(--sys-bg);border-color:var(--sys);font-size:1.05rem}
+.node.hw-l{background:var(--hw-bg)}
+.tree ul ul .node{width:100%;font-size:.95rem;padding:10px 8px;overflow-wrap:anywhere}
+@media (max-width:700px){.tree ul ul .node{width:auto}}
+.node.sys{background:var(--sys-bg);color:var(--sys)}.node.app{background:var(--app-bg);color:var(--app)}.node.ins{background:var(--ins-bg);color:var(--ins)}
+@media (max-width:700px){
+  .tree,.tree ul{display:block;padding-top:0}
+  .tree ul{margin-left:14px;padding-left:14px;border-left:2px solid var(--muted)}
+  .tree li{padding:8px 0 0;text-align:left}
+  .tree li::before,.tree li::after,.tree ul::before{display:none}
+  .tree ul>li>.node{position:relative}
+}
+.desc{display:grid;gap:6px;padding:16px 18px;border-radius:12px;border:1px solid var(--line);scroll-margin-top:80px}
+.desc .tag{font-family:var(--mono);font-size:.78rem;font-weight:700;letter-spacing:.05em;color:var(--muted)}
+.desc.hwd{background:var(--hw-bg);border-color:transparent}.desc.hwd .tag{color:var(--hw)}
+.desc.swd{background:var(--sys-bg);border-color:transparent}.desc.swd .tag{color:var(--sys)}
+.desc-group{display:grid;gap:12px}
+.kind.hw{background:var(--hw-bg)}.kind.hw h3{color:var(--hw)}
+.kind{scroll-margin-top:80px}
+.flash{animation:flash 1.4s}
+@keyframes flash{0%,60%{box-shadow:0 0 0 4px var(--app)}100%{box-shadow:0 0 0 0 transparent}}
+/* installer sim */
+.inst-steps{display:flex;flex-wrap:wrap;gap:6px}
+.inst-steps span{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.inst-steps span.cur{background:var(--sys);border-color:var(--sys);color:#fff}
+.inst-steps span.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.desk{position:relative;min-height:470px;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#1f5fbf,#3d8be0 55%,#7cc0f5);display:flex;align-items:center;justify-content:center;padding:16px 16px 56px;color:#1b2433}
+.desk-icons{position:absolute;left:12px;top:12px;display:grid;gap:10px;justify-items:center}
+.dicon{display:grid;justify-items:center;gap:4px;width:84px;background:transparent;border:0;color:#fff;font-size:.8rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.6);border-radius:8px;padding:4px}
+.dicon:hover{background:rgba(255,255,255,.18)}
+.dicon .ico{width:44px;height:44px}
+.dicon.new{animation:pop .5s}
+@keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.taskbar2{position:absolute;left:0;right:0;bottom:0;height:42px;background:rgba(20,28,40,.85);display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#fff}
+.tb-start{font-size:1.3rem}.tb-clock{font-family:var(--mono);font-size:.85rem}
+.dlg{position:relative;z-index:2;width:min(560px,100%);background:#f3f5f8;color:#1b2433;border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.35);overflow:hidden;display:grid}
+.dlg[hidden]{display:none!important}
+.dlg-title{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #d5dce7;font-size:.85rem;font-weight:700}
+.dlg-title .ico{width:20px;height:20px;border-radius:5px}
+.dlg-title .x{margin-left:auto;color:#5b6678;font-weight:400}
+.dlg-body{padding:18px 20px;display:grid;gap:12px;min-height:250px;align-content:start}
+.dlg-body h3{font-size:1.05rem}
+.dlg-body p{font-size:.98rem}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;background:#e6eaf0;border-top:1px solid #d5dce7}
+.wbtn{border:1px solid #9aa6b8;background:#fff;color:#1b2433;border-radius:6px;padding:7px 18px;font-weight:700;min-width:96px}
+.wbtn.pri{background:#2f6fe4;border-color:#2f6fe4;color:#fff}
+.wbtn:disabled{opacity:.45;cursor:not-allowed}
+.lic-text{height:120px;overflow-y:auto;background:#fff;border:1px solid #c5cdd9;border-radius:6px;padding:10px;font-size:.85rem;line-height:1.45}
+.dlg label{display:flex;gap:8px;align-items:flex-start;font-weight:600;cursor:pointer}
+.dlg input[type=checkbox]{width:18px;height:18px;margin-top:2px;flex:none}
+.dlg input[type=text]{font:inherit;font-family:var(--mono);font-size:.85rem;padding:6px 8px;border:1px solid #9aa6b8;border-radius:6px;width:100%;background:#fff;color:#1b2433}
+.space{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem}
+.space b{font-family:var(--mono)}
+.pbar{height:18px;background:#fff;border:1px solid #9aa6b8;border-radius:4px;overflow:hidden}
+.pbar span{display:block;height:100%;width:0;background:repeating-linear-gradient(45deg,#2fa84f 0 10px,#36bb5a 10px 20px);transition:width .25s linear}
+.plog{font-family:var(--mono);font-size:.78rem;height:96px;overflow-y:auto;background:#0f1722;color:#9ef0b5;border-radius:6px;padding:8px}
+.results{display:grid;gap:8px}
+.res-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;background:#fff;border:1px solid #d5dce7;font-size:.95rem}
+.res-item b{flex:none;width:22px;text-align:center}
+.res-item.good b{color:#1f9d55}.res-item.bad b{color:#d23b3b}
+.browser{display:grid;gap:10px}
+.addr{font-family:var(--mono);font-size:.85rem;background:#fff;border:1px solid #c5cdd9;border-radius:999px;padding:6px 12px;color:#5b6678}
+.sres{text-align:left;background:#fff;border:1px solid #d5dce7;border-radius:8px;padding:10px 12px;display:grid;gap:2px;color:#1b2433}
+.sres:hover{border-color:#2f6fe4}
+.sres .t{color:#1a4fc4;font-weight:800;font-size:1rem}
+.sres .u{font-family:var(--mono);font-size:.78rem;color:#1f7a3f}
+.sres .d{font-size:.88rem;color:#5b6678}
+.sres.flag{border-color:#d23b3b;background:#fbe3e3}
+.paint-app{display:grid;gap:8px}
+.paint-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.paint-tools button{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #9aa6b8}
+.paint-tools button.on{box-shadow:0 0 0 3px #1b2433}
+.paint-app canvas{width:100%;height:220px;background:#fff;border:1px solid #c5cdd9;border-radius:6px;touch-action:none;cursor:crosshair}
+.warn-box{background:#fff4e0;border:1px solid #f0b45a;border-radius:8px;padding:10px 12px;font-size:.92rem}
+.danger-box{background:#fbe3e3;border:1px solid #d23b3b;border-radius:8px;padding:10px 12px;font-size:.92rem}
+@media (max-width:560px){.desk-icons{position:static;grid-auto-flow:column;margin-bottom:12px}.desk{flex-direction:column;justify-content:flex-start}}
+/* icons */
+.ico{display:block;flex:none;width:34px;height:34px;border-radius:9px}
+.ico.logo{background:#fff;padding:4px;border:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:6px}
+.chip .ico{width:22px;height:22px;border-radius:6px}
+.chip .ico.logo{padding:2px}
+.odd button .ico{width:56px;height:56px;border-radius:14px}
+.odd button .ico.logo{padding:7px}
+
+/* richer explanation */
+.sec{display:grid;gap:12px}
+.recipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.recipe ol{margin:0;padding-left:1.4em;font-family:var(--mono);font-size:.92rem;display:grid;gap:4px}
+.recipe>div{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.os-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.os-fn{background:var(--sys-bg);border-radius:12px;padding:14px;display:grid;gap:4px;align-content:start}
+.os-fn b{color:var(--sys);font-family:var(--display);font-size:.9rem}
+.os-fn span{font-size:.95rem}
+.devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.devices>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.lic{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.lic>div{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:6px;align-content:start}
+.lic .tag{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.06em}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.flow span{padding:8px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-weight:700}
+.flow i{font-style:normal;color:var(--muted);font-family:var(--mono)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px}
+.fact{border-radius:12px;padding:16px;background:var(--ins-bg);display:grid;gap:6px;align-content:start}
+.fact .pic{display:block;width:100%;height:auto;border-radius:10px}
+.fact .photo{justify-self:start;font-weight:800;color:var(--ins);text-decoration:underline;text-underline-offset:3px}
+.fact .pic.real{aspect-ratio:240/150;object-fit:cover;object-position:50% 28%;background:#f6ead3}
+.fact .yr{font-family:var(--display);font-weight:800;font-size:1.5rem;color:var(--ins)}
+.warn{border-left:5px solid var(--bad);background:var(--bad-bg);padding:14px 18px;border-radius:0 10px 10px 0}
+
+/* practical */
+.steps{display:grid;gap:12px;counter-reset:st}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.step::before{counter-increment:st;content:counter(st);width:44px;height:44px;border-radius:12px;background:var(--sys);color:#fff;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:1.2rem}
+.step h3{margin-bottom:4px}
+.path{font-family:var(--mono);font-size:.88rem;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
+.step label{display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:700;cursor:pointer}
+.step input[type=checkbox]{width:20px;height:20px}
+.step.done{background:var(--ok-bg);border-color:var(--ok)}
+.sheet{width:100%;border-collapse:collapse}
+.sheet th,.sheet td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:middle}
+.sheet th{background:var(--bg);font-size:.85rem}
+.sheet input,.sheet select{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:120px}
+.sheet td.res{font-weight:800;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* phone sorting */
+.fcard{position:relative;display:grid;justify-items:center;gap:12px;padding:28px 16px 24px;border:2px solid var(--line);border-radius:18px;background:var(--panel);transition:border-color .2s,background .2s}
+.fcard .ico{width:84px;height:84px;border-radius:20px}
+.fcard .ico.logo{padding:10px}
+.fcard .mono{width:84px;height:84px;border-radius:20px;display:grid;place-items:center;background:var(--bg);font-family:var(--mono);font-size:1.4rem;color:var(--muted)}
+.fc-name{font-family:var(--display);font-weight:700;font-size:clamp(1.3rem,6vw,1.7rem);text-align:center;text-wrap:balance}
+.fc-count{position:absolute;top:10px;right:14px;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.fcard.right{border-color:var(--ok);background:var(--ok-bg)}
+.fcard.wrong{border-color:var(--bad);animation:shake .35s}
+.kbtns{display:grid;gap:10px}
+.kbtn{display:grid;gap:2px;text-align:left;padding:14px 18px;border-radius:14px;border:2px solid transparent;min-height:64px;color:var(--ink)}
+.kbtn b{font-family:var(--display);font-size:1.1rem}
+.kbtn span{font-size:.9rem;color:var(--muted)}
+.kbtn.sys{background:var(--sys-bg)}.kbtn.sys b{color:var(--sys)}
+.kbtn.app{background:var(--app-bg)}.kbtn.app b{color:var(--app)}
+.kbtn.ins{background:var(--ins-bg)}.kbtn.ins b{color:var(--ins)}
+.kbtn:active{transform:scale(.98)}
+.kbtn:disabled{opacity:.4;cursor:not-allowed}
+.kbtn.hit{border-color:var(--ok)}
+@media (min-width:700px){.kbtns{grid-template-columns:repeat(3,1fr)}}
+/* lesson 2 */
+:root{--g1:#2f6fe4;--g1b:#e3ecfd;--g2:#e0711d;--g2b:#fdeedd;--g3:#4d5a6d;--g3b:#e6eaf0;--g4:#8a3fd1;--g4b:#f1e6fb;--g5:#1f9d55;--g5b:#ddf5e7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--g1:#6f9ff5;--g1b:#1d2c48;--g2:#f29a4f;--g2b:#3a2816;--g3:#a6b2c4;--g3b:#252f3d;--g4:#b98af0;--g4b:#2e1f44;--g5:#4cc985;--g5b:#163a27}}
+:root[data-theme="dark"]{--g1:#6f9ff5;--g1b:#1d2c48;--g2:#f29a4f;--g2b:#3a2816;--g3:#a6b2c4;--g3b:#252f3d;--g4:#b98af0;--g4b:#2e1f44;--g5:#4cc985;--g5b:#163a27}
+.warm{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.wcard{text-align:left;border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:14px;padding:16px;display:grid;gap:8px;align-content:start;min-height:120px}
+.wcard .n{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.wcard .wq{font-weight:800;font-size:1.08rem}
+.wcard .wa{color:var(--ok);font-weight:700}
+.wcard .wa.hide{color:var(--muted);font-weight:600}
+.wcard.open{border-color:var(--ok);background:var(--ok-bg)}
+.layers2{display:grid;gap:6px;max-width:620px}
+.layers2 .layer{font-size:1rem}
+.tnote{border:1px dashed var(--app);background:var(--app-bg);border-radius:10px;padding:10px 14px;font-size:.95rem}
+.aqua{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;background:var(--sys-bg);border-radius:12px;padding:14px 16px}
+.aqua-pic{width:96px;height:72px;border-radius:10px 10px 16px 16px;background:linear-gradient(#bfe3ff,#5aa9e6);border:3px solid var(--sys);display:flex;align-items:center;justify-content:space-around;font-size:1.4rem}
+@media (max-width:480px){.aqua{grid-template-columns:1fr}}
+.osmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:10px}
+.osmap>div{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;align-content:start}
+.osh .chip{font-family:var(--display);font-size:1rem;background:var(--sys-bg);border-color:transparent;color:var(--sys)}
+.osh .chip .ico{width:28px;height:28px}
+.cmp td:first-child{font-family:var(--body);white-space:normal}
+.terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.terms>div{background:var(--bg);border-radius:12px;padding:12px 14px;display:grid;gap:4px}
+.terms b{font-family:var(--display);font-size:.9rem;color:var(--sys)}
+.terms span{font-size:.95rem}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.grp{border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start}
+.grp h3{font-size:1rem}
+.grp.g1{background:var(--g1b)}.grp.g1 h3{color:var(--g1)}
+.grp.g2{background:var(--g2b)}.grp.g2 h3{color:var(--g2)}
+.grp.g3{background:var(--g3b)}.grp.g3 h3{color:var(--g3)}
+.grp.g4{background:var(--g4b)}.grp.g4 h3{color:var(--g4)}
+.grp.g5{background:var(--g5b)}.grp.g5 h3{color:var(--g5)}
+.grp .chip{background:var(--panel)}
+.pack{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.pack>div{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:6px;align-content:start}
+.pack .chip{justify-self:start;font-family:var(--display)}
+.lang{border-left:5px solid var(--ok);background:var(--ok-bg);padding:14px 18px;border-radius:0 10px 10px 0;display:grid;gap:6px}
+.lang s{color:var(--bad)}
+.think{border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.think summary{font-weight:800;cursor:pointer}
+.think p{margin-top:8px}
+.think[open]{background:var(--bg)}
+/* desktop quest */
+.qbanner{border-radius:12px;padding:12px 16px;background:var(--sys-bg);font-weight:800;font-size:1.08rem;display:flex;gap:10px;align-items:baseline}
+.qbanner .k{font-family:var(--mono);font-size:.8rem;color:var(--sys);white-space:nowrap}
+.qbanner.done{background:var(--ok-bg);color:var(--ok)}
+.quest{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:start}
+@media (max-width:880px){.quest{grid-template-columns:1fr}}
+.qlist{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+.qlist ol{margin:0;padding-left:1.3em;display:grid;gap:6px;font-size:.95rem}
+.qlist li.ok{color:var(--ok);font-weight:700}
+.qlist li.ok::marker{content:"✓  "}
+.qlist li.cur{font-weight:800}
+.wd{position:relative;height:500px;border-radius:12px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#5ea7ef,#1f5fbf 60%,#173f86);user-select:none;-webkit-user-select:none;color:#1b2433}
+.wd-icons{position:absolute;left:8px;top:8px;display:grid;gap:4px}
+@media (max-width:560px){.wd{height:540px}.wd-icons{display:flex;right:8px;justify-content:space-between}.wd-ic{width:72px}}
+.wd-ic{display:grid;justify-items:center;gap:3px;width:82px;padding:5px 2px;border:1px solid transparent;border-radius:6px;background:transparent;color:#fff;font-size:.78rem;font-weight:700;line-height:1.15;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.wd-ic:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3)}
+.wd-ic .ib{position:relative}
+.wd-ic .ico{width:40px;height:40px}
+.wd-ic.sc .ib::after{content:"↗";position:absolute;left:-3px;bottom:-3px;width:16px;height:16px;border-radius:3px;background:#fff;color:#1a4fc4;font-size:12px;line-height:16px;text-align:center;text-shadow:none;border:1px solid #9aa6b8}
+.wd-bar{position:absolute;left:0;right:0;bottom:0;height:46px;background:rgba(18,24,36,.92);display:flex;align-items:center;gap:4px;padding:0 6px;z-index:40}
+.wd-start{width:40px;height:38px;border:0;border-radius:6px;background:transparent;display:grid;place-items:center;flex:none}
+.wd-start:hover,.wd-start.on{background:rgba(255,255,255,.14)}
+.wd-tasks{display:flex;gap:3px;min-width:0;overflow:hidden;flex:1}
+.wd-tb{display:flex;align-items:center;gap:6px;height:38px;padding:0 8px;border:0;border-radius:6px;background:rgba(255,255,255,.06);color:#fff;font-size:.8rem;font-weight:700;max-width:150px;min-width:0;box-shadow:inset 0 -2px 0 rgba(255,255,255,.35)}
+.wd-tb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wd-tb .ico{width:22px;height:22px;border-radius:5px}
+.wd-tb .ico.logo{padding:2px}
+.wd-tb.front{background:rgba(255,255,255,.18);box-shadow:inset 0 -3px 0 #4cc2ff}
+@media (max-width:560px){.wd-tb span{display:none}.wd-tb{padding:0 6px}}
+.wd-clock{color:#fff;font-family:var(--mono);font-size:.8rem;flex:none;padding:0 4px}
+.wd-menu{position:absolute;left:6px;bottom:52px;width:min(330px,calc(100% - 12px));max-height:calc(100% - 60px);overflow:auto;background:#f3f5f8;border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.4);padding:12px;display:grid;gap:8px;z-index:45}
+.wd-menu[hidden]{display:none}
+.wd-search{font:inherit;font-size:.95rem;padding:8px 10px;border:1px solid #9aa6b8;border-radius:999px;background:#fff;color:#1b2433;width:100%}
+.wd-mh{font-size:.75rem;font-family:var(--mono);color:#5b6678;text-transform:uppercase;letter-spacing:.06em}
+.wd-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.wd-app{display:grid;justify-items:center;gap:4px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:#1b2433;font-size:.75rem;font-weight:700;line-height:1.15;text-align:center}
+.wd-app:hover{background:#dfe6f0}
+.wd-app .ico{width:34px;height:34px}
+.wd-none{grid-column:1/-1;font-size:.85rem;color:#5b6678;padding:6px}
+.wd-win{position:absolute;width:min(340px,calc(100% - 20px));background:#fff;color:#1b2433;border-radius:8px;box-shadow:0 12px 34px rgba(0,0,0,.4);overflow:hidden;display:grid;grid-template-rows:auto 1fr;border:1px solid #9aa6b8}
+.wd-win.front{border-color:#4c7fd6}
+.wd-tt{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 8px;background:#e9edf3;font-size:.8rem;font-weight:700}
+.wd-win.front .wd-tt{background:#dbe6f7}
+.wd-tt .ico{width:18px;height:18px;border-radius:4px}
+.wd-tt .ico.logo{padding:1px}
+.wd-tt b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.wd-tt button{width:32px;height:26px;border:0;border-radius:4px;background:transparent;color:#1b2433;font-size:1rem;line-height:1}
+.wd-tt button:hover{background:#c5cdd9}
+.wd-tt button.x:hover{background:#d23b3b;color:#fff}
+.wd-c{padding:10px;font-size:.88rem;display:grid;gap:8px;align-content:start;min-height:120px}
+.wd-ta{width:100%;height:110px;resize:none;font:inherit;font-family:var(--mono);font-size:.85rem;border:1px solid #c5cdd9;border-radius:4px;padding:6px;background:#fff;color:#1b2433}
+.wd-canvas{width:100%;height:140px;border:1px solid #c5cdd9;border-radius:4px;background:#fff;touch-action:none;cursor:crosshair;display:block}
+.wd-rib{font-size:.75rem;color:#2b579a;font-weight:800;display:flex;gap:10px}
+.wd-calc{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.wd-calc output{grid-column:1/-1;text-align:right;font-family:var(--mono);font-size:1.3rem;padding:4px 8px;background:#f3f5f8;border-radius:4px;min-height:1.8em}
+.wd-calc button{border:1px solid #d5dce7;background:#f8f9fb;border-radius:4px;padding:6px 0;font-weight:800;color:#1b2433}
+.wd-calc button.op{background:#e3ecfd}
+.wd-tm{width:100%;border-collapse:collapse;font-size:.82rem}
+.wd-tm th,.wd-tm td{text-align:left;padding:4px 6px;border-bottom:1px solid #e1e6ee}
+.wd-tm th{font-size:.72rem;color:#5b6678}
+.wd-tm td .ico{width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:6px}
+.wd-tm td .ico.logo{padding:1px}
+.wd-tm button{font-size:.75rem;border:1px solid #9aa6b8;background:#fff;border-radius:4px;padding:2px 6px;color:#1b2433}
+.wd-files{display:grid;gap:4px}
+.wd-files span{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:4px;background:#f3f5f8}
+.wd-g{font-family:var(--display);font-size:1.4rem;text-align:center;color:#4285f4;padding:8px 0}
+.wd-addr{font-family:var(--mono);font-size:.75rem;background:#f1f3f4;border-radius:999px;padding:4px 10px;color:#5b6678}
+/* OS rounds + office pick */
+.os-head{display:flex;gap:14px;align-items:center}
+.os-head .ico{width:56px;height:56px;border-radius:14px}
+.os-head .ico.logo{padding:7px}
+.odd.pick button{position:relative}
+.odd.pick button[aria-pressed="true"]{border-color:var(--sys);background:var(--sys-bg)}
+.odd.pick button[aria-pressed="true"]::after{content:"✓";position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--sys);color:#fff;font-size:.85rem;display:grid;place-items:center}
+.odd.pick button.right{border-color:var(--ok);background:var(--ok-bg)}
+.odd.pick button.right::after{background:var(--ok)}
+.odd.pick button.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.odd.pick button.wrong::after{content:"✗";background:var(--bad)}
+.odd.pick button.miss{border-color:var(--ok);border-style:dashed}
+.odd.pick button.miss::after{content:"!";position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--app);color:#fff;font-size:.85rem;display:grid;place-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;color:var(--muted)}
+/* group sort (5 buttons) */
+.k5{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+.kbtn.g1{background:var(--g1b)}.kbtn.g1 b{color:var(--g1)}
+.kbtn.g2{background:var(--g2b)}.kbtn.g2 b{color:var(--g2)}
+.kbtn.g3{background:var(--g3b)}.kbtn.g3 b{color:var(--g3)}
+.kbtn.g4{background:var(--g4b)}.kbtn.g4 b{color:var(--g4)}
+.kbtn.g5{background:var(--g5b)}.kbtn.g5 b{color:var(--g5)}
+.kbtn b{font-size:1rem}
+/* pairs */
+.pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.pcol{display:grid;gap:8px;align-content:start}
+.pb{text-align:left;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-weight:800;min-height:52px;overflow-wrap:anywhere}
+.pb.en{font-family:var(--mono);font-weight:700}
+.pb.sel{border-color:var(--sys);background:var(--sys-bg)}
+.pb.right{border-color:var(--ok);background:var(--ok-bg);opacity:.75}
+.pb.wrong{border-color:var(--bad);background:var(--bad-bg);animation:shake .35s}
+.nb{margin:0;padding-left:1.3em;display:grid;gap:6px}
+@media (max-width:560px){.k5{grid-template-columns:1fr 1fr;gap:8px}.k5 .kbtn{min-height:54px;padding:10px 12px}.k5 .kbtn span{display:none}.k5 .kbtn b{font-size:.92rem}.k5 .kbtn:last-child{grid-column:1/-1}
+  #fcard{padding:20px 12px 16px}#fcard .ico,#fcard .mono{width:68px;height:68px}}
+.name-in{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:100%;max-width:420px}
+@media (max-width:560px){#sortBody{gap:12px;padding-top:16px}#sortBody h2{font-size:1.15rem}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== lesson: compression & archives (8 клас) ===== */
+:root{--zip:#0f8a7e;--zip-bg:#dcf3f0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--zip:#4fd1c0;--zip-bg:#123532}}
+:root[data-theme="dark"]{--zip:#4fd1c0;--zip-bg:#123532}
+.start{background:var(--zip)}
+.def.zip{border-color:var(--zip);background:var(--zip-bg)}.def.zip b{color:var(--zip)}
+.problem{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;border-radius:14px;padding:16px 18px;background:var(--app-bg)}
+.problem .ph{font-size:2.6rem;line-height:1}
+.problem b{color:var(--app)}
+@media (max-width:480px){.problem{grid-template-columns:1fr}}
+
+/* suitcase picture */
+.suit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.suit>div{border-radius:12px;padding:14px 16px;display:grid;gap:6px;align-content:start;background:var(--bg)}
+.suit .big2{font-family:var(--display);font-weight:800;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.suit .a .big2{color:var(--bad)}.suit .b .big2{color:var(--ok)}
+
+/* two kinds */
+.kinds2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.kinds2>div{border-radius:14px;padding:18px;display:grid;gap:10px;align-content:start}
+.kinds2 .ll{background:var(--sys-bg)}.kinds2 .ly{background:var(--app-bg)}
+.kinds2 h3{font-size:1.1rem}.kinds2 .ll h3{color:var(--sys)}.kinds2 .ly h3{color:var(--app)}
+.kinds2 .chip{background:var(--panel);font-family:var(--mono)}
+.kinds2 ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+
+/* methods */
+.methods{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.methods>div{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.methods h3{color:var(--zip)}
+.ex{font-family:var(--mono);font-size:.92rem;background:var(--bg);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere}
+.ex i{font-style:normal;color:var(--muted)}
+.ex b{color:var(--zip)}
+.morse{display:flex;flex-wrap:wrap;gap:6px}
+.morse span{font-family:var(--mono);font-size:.85rem;padding:3px 8px;border-radius:6px;background:var(--bg)}
+
+/* formula */
+.formula{display:flex;flex-wrap:wrap;align-items:center;gap:14px;border-radius:14px;padding:16px 20px;background:var(--zip-bg)}
+.frac{display:inline-grid;text-align:center;font-family:var(--display);font-weight:700;font-size:1.05rem}
+.frac>span:first-child{border-bottom:3px solid var(--ink);padding:0 8px 4px}
+.frac>span:last-child{padding:4px 8px 0}
+.formula .k{font-family:var(--display);font-weight:800;font-size:1.8rem;color:var(--zip)}
+.formula .eq{font-family:var(--display);font-size:1.4rem;font-weight:800}
+.formula p{flex:1 1 220px}
+.ktable td:nth-child(n+2){font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kbar{display:inline-block;height:10px;border-radius:99px;background:var(--zip);vertical-align:middle;margin-right:8px}
+
+/* formats */
+.fmts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px}
+.fmts>div{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;align-content:start}
+.fmts b{font-family:var(--mono);font-size:1.05rem;color:var(--zip)}
+.ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.ops>div{background:var(--zip-bg);border-radius:12px;padding:12px 14px;display:grid;gap:4px;align-content:start}
+.ops b{font-family:var(--display);font-size:.9rem;color:var(--zip)}
+.ops span{font-size:.95rem}
+.apps{display:flex;flex-wrap:wrap;gap:8px}
+.apps .chip{display:inline-flex;align-items:center;gap:6px}
+.chip .ico{width:22px;height:22px;border-radius:5px}
+.fact2{border-radius:12px;padding:14px 16px;background:var(--ins-bg);display:grid;gap:6px}
+.fact2 b.t{font-family:var(--display);color:var(--ins)}
+
+/* ===== RLE pixel lab ===== */
+.rle{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.rle{grid-template-columns:1fr}}
+.rle-left{display:grid;gap:10px;justify-items:start}
+.rgrid{display:grid;grid-template-columns:repeat(10,1fr);width:min(100%,360px);aspect-ratio:1;border:2px solid var(--ink);border-radius:6px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:#fff}
+.rgrid .px{border:0;padding:0;margin:0;box-shadow:inset 0 0 0 .5px rgba(27,36,51,.18);cursor:crosshair;min-width:0;min-height:0}
+.rgrid .px.bad{box-shadow:inset 0 0 0 3px #d23b3b}
+.rgrid.lock .px{cursor:default}
+.pal{display:flex;flex-wrap:wrap;gap:6px}
+.pal button{width:44px;height:44px;border-radius:10px;border:3px solid var(--line);font-family:var(--mono);font-weight:700;display:grid;place-items:center;font-size:.9rem}
+.pal button[aria-pressed="true"]{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 3px 0 var(--line)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:.92rem}
+.presets button:hover{border-color:var(--zip)}
+.rcode{font-family:var(--mono);font-size:.92rem;display:grid;gap:2px;counter-reset:rr;border:1px solid var(--line);border-radius:12px;padding:10px 12px;max-height:340px;overflow:auto}
+.rcode div{display:flex;gap:10px;padding:2px 6px;border-radius:6px}
+.rcode div::before{counter-increment:rr;content:counter(rr);color:var(--muted);width:1.6em;text-align:right;flex:none}
+.rcode div.hl{background:var(--zip-bg)}
+.rcode em{font-style:normal;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:480px){.stats{grid-template-columns:1fr 1fr}}
+.stat{border-radius:12px;padding:10px 12px;background:var(--bg);display:grid;gap:2px}
+.stat span{font-size:.8rem;color:var(--muted);font-weight:700}
+.stat b{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.stat.good b{color:var(--ok)}.stat.bad b{color:var(--bad)}
+.verdict{font-weight:700;border-radius:10px;padding:10px 14px;background:var(--bg)}
+.verdict.good{background:var(--ok-bg);color:var(--ok)}.verdict.bad{background:var(--bad-bg);color:var(--bad)}
+.puz-code{font-family:var(--mono);font-size:1rem;display:grid;gap:2px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;counter-reset:rr}
+.puz-code div{display:flex;gap:10px}
+.puz-code div::before{counter-increment:rr;content:counter(rr);color:var(--muted);width:1.6em;text-align:right;flex:none}
+.puz-code div.ok{color:var(--ok)}
+
+/* ===== text compression ===== */
+.tc-in{width:100%;font:inherit;font-family:var(--mono);font-size:1rem;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+textarea.tc-in{min-height:110px;resize:vertical}
+.tc-out{font-family:var(--mono);font-size:1rem;padding:12px 14px;border-radius:10px;background:var(--bg);overflow-wrap:anywhere;white-space:pre-wrap;min-height:2.6em}
+.tok{display:inline-block;min-width:1.4em;text-align:center;border-radius:6px;background:var(--zip);color:#fff;font-weight:700;padding:0 3px;margin:0 1px}
+.dict{display:grid;gap:4px;font-family:var(--mono);font-size:.95rem}
+.dict div{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.flash{animation:flash 1s}
+@keyframes flash{0%{background:var(--app-bg)}100%{background:var(--bg)}}
+.row-btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* ===== jpeg lab ===== */
+.jp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:18px;align-items:start}
+@media (max-width:820px){.jp{grid-template-columns:1fr}}
+.jp-view{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#000;line-height:0}
+.jp-view img,.jp-view canvas{width:100%;height:auto;display:block}
+.jp-view .lens{position:absolute;border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.5);pointer-events:none}
+.jp-side{display:grid;gap:12px}
+.zoom{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);image-rendering:pixelated;display:block;background:#000}
+.range{display:grid;gap:6px}
+.range input{width:100%;accent-color:var(--zip);height:28px}
+.range label{display:flex;justify-content:space-between;font-weight:800}
+.range label b{font-family:var(--mono);color:var(--zip)}
+.jp-stats{display:grid;gap:8px}
+.jp-stats .stat{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.jp-stats .stat b{font-size:1.05rem}
+.qbtns{display:flex;flex-wrap:wrap;gap:6px}
+.qbtns button{border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:4px 10px;font-weight:700;font-family:var(--mono);font-size:.85rem}
+.file-btn{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--line);border-radius:10px;padding:8px 14px;font-weight:800;cursor:pointer}
+.file-btn input{position:absolute;opacity:0;width:1px;height:1px}
+
+/* ===== archiver simulator (fixed light look, like a real app) ===== */
+.zw{border:1px solid #9aa6b8;border-radius:10px;overflow:hidden;background:#fff;color:#1b2433;position:relative;font-size:.92rem}
+.zw-title{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#e9edf3;font-weight:800;font-size:.85rem}
+.zw-title .ico{width:20px;height:20px;border-radius:4px}
+.zw-tb{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #d5dce7;background:#f6f8fb}
+.zw-tb button{display:grid;justify-items:center;gap:2px;min-width:74px;padding:6px 8px;border:1px solid transparent;border-radius:6px;background:transparent;color:#1b2433;font-weight:700;font-size:.78rem}
+.zw-tb button i{font-style:normal;font-size:1.35rem;line-height:1}
+.zw-tb button:hover:not(:disabled){background:#e3ecfd;border-color:#b8cdf5}
+.zw-tb button:disabled{opacity:.35;cursor:not-allowed}
+.zw-path{font-family:var(--mono);font-size:.78rem;padding:5px 10px;border-bottom:1px solid #d5dce7;color:#5b6678;background:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zw-list{width:100%;border-collapse:collapse}
+.zw-list th{font-size:.72rem;color:#5b6678;text-align:left;padding:6px 8px;border-bottom:1px solid #d5dce7;font-weight:700;background:#fbfcfd;white-space:nowrap}
+.zw-list td{padding:6px 8px;border-bottom:1px solid #eef1f5;white-space:nowrap}
+.zw-list td.n{white-space:normal;overflow-wrap:anywhere}
+.zw-list td.num,.zw-list th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.zw-list tr.f{cursor:pointer}
+.zw-list tr.f:hover td{background:#f1f5fc}
+.zw-list tr.sel td{background:#cfe0fb}
+.zw-list tr.new td{animation:zwnew 1.2s}
+@keyframes zwnew{0%{background:#ddf5e7}}
+.zw-list .fi{display:inline-block;width:1.4em;text-align:center;margin-right:4px}
+.zw-list .lock{margin-left:4px}
+.zw-list .sub{font-size:.75rem;color:#5b6678;display:block}
+@media (max-width:600px){.zw-list .hm{display:none}}
+.zw-status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.78rem;padding:5px 10px;background:#f6f8fb;border-top:1px solid #d5dce7;color:#5b6678}
+.zw-scroll{max-height:360px;overflow:auto}
+.zw-dlg{position:absolute;inset:0;background:rgba(18,24,36,.45);display:grid;place-items:center;padding:10px;z-index:5}
+.zw-dlg[hidden]{display:none}
+.zw-box{background:#f3f5f8;border:1px solid #9aa6b8;border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.35);width:min(460px,100%);max-height:100%;overflow:auto;display:grid}
+.zw-box h4{margin:0;font-size:.85rem;padding:8px 12px;background:#dbe6f7;display:flex;align-items:center;gap:8px}
+.zw-form{padding:12px;display:grid;gap:10px}
+.zw-form label{display:grid;gap:3px;font-size:.8rem;font-weight:700;color:#3b4658}
+.zw-form input[type=text],.zw-form input[type=password],.zw-form select{font:inherit;font-size:.92rem;padding:6px 8px;border:1px solid #9aa6b8;border-radius:5px;background:#fff;color:#1b2433;width:100%}
+.zw-form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.zw-form .two{grid-template-columns:1fr}}
+.zw-form .ck{display:flex;gap:8px;align-items:center;font-weight:700}
+.zw-form .ck input{width:18px;height:18px}
+.zw-form .note2{font-size:.78rem;color:#5b6678;font-weight:600}
+.zw-btns{display:flex;justify-content:flex-end;gap:8px;padding:0 12px 12px}
+.zw-btns button{border:1px solid #9aa6b8;background:#fff;color:#1b2433;border-radius:5px;padding:6px 16px;font-weight:800}
+.zw-btns button.pri{background:#2f6fe4;border-color:#2f6fe4;color:#fff}
+.zw-prog{padding:14px;display:grid;gap:8px;font-size:.88rem}
+.zw-msg{padding:14px;display:grid;gap:8px;font-size:.92rem}
+.zw-msg .big3{font-family:var(--display);font-size:1.3rem;font-weight:800;color:#0f8a7e}
+.zw-err{color:#d23b3b;font-weight:800;font-size:.85rem;min-height:1.2em}
+.arch-quest{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+@media (max-width:900px){.arch-quest{grid-template-columns:1fr}}
+.qlist .why2{display:block;font-weight:600;color:var(--muted);font-size:.88rem;margin-top:2px}
+.qlist li.ok .why2{color:var(--ok)}
+
+/* coefficient trainer */
+.cf{border:2px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:12px}
+.cf .q2{font-size:1.15rem;font-weight:700}
+.cf-in{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cf-in input{font:inherit;font-family:var(--mono);font-size:1.2rem;font-weight:700;width:9em;padding:8px 12px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+.cf-in .u{font-weight:800}
+.cf.right{border-color:var(--ok);background:var(--ok-bg)}
+.cf.wrong{border-color:var(--bad)}
+.sol{font-family:var(--mono);font-size:.95rem;background:var(--bg);border-radius:10px;padding:10px 12px}
+.sheet input.num{min-width:80px;font-family:var(--mono)}
+.concl{font-weight:700}
+.name-in{font:inherit;font-size:1.05rem;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:min(100%,420px)}
+.k2{grid-template-columns:1fr 1fr!important}
+.k2 .kbtn{min-height:72px}
+@media (max-width:480px){.k2 .kbtn span{font-size:.8rem}.k2 .kbtn b{font-size:1rem}}
+.fc-emo{font-size:3.6rem;line-height:1}
+.fc-sub{font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+em.cl{font-style:normal;font-weight:700;display:inline-block;min-width:1.35em;text-align:center;border-radius:5px;margin-left:1px;padding:0 2px;box-shadow:inset 0 0 0 1px rgba(27,36,51,.25);line-height:1.35}
+
+</style>
+
+
+<nav class="taskbar" role="tablist" aria-label="Етапи уроку">
+  <span class="start">Архіви · 8 клас</span>
+  <button class="tab" role="tab" data-tab="warm">1. Розминка</button>
+  <button class="tab" role="tab" data-tab="learn">2. Пояснення</button>
+  <button class="tab" role="tab" data-tab="rle">3. Піксельний код</button>
+  <button class="tab" role="tab" data-tab="text">4. Стисни текст</button>
+  <button class="tab" role="tab" data-tab="jpeg">5. Фото-лабораторія</button>
+  <button class="tab" role="tab" data-tab="arch">6. Архіватор</button>
+  <button class="tab" role="tab" data-tab="sort">7. Без втрат?</button>
+  <button class="tab" role="tab" data-tab="coef">8. Коефіцієнт</button>
+  <button class="tab" role="tab" data-tab="words">9. Словничок</button>
+  <button class="tab" role="tab" data-tab="quiz">10. Вікторина</button>
+  <button class="tab" role="tab" data-tab="practice">11. Практична робота</button>
+  
+</nav>
+
+<main>
+<!-- WARM -->
+<section class="win" data-panel="warm">
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>розминка.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">8 клас · Інформатика</p><h1>Стиснення та архівування даних</h1></div>
+    <p class="lead">Пригадаймо, як вимірюють і кодують дані. Спершу дай відповідь усно, а потім натисни на картку, щоб перевірити себе.</p>
+    <div class="warm" id="warm"></div>
+    <div class="problem">
+      <div class="ph" aria-hidden="true">📸🐈</div>
+      <p><b>Проблемне питання уроку.</b> Ти сфотографував котика, і фото займає 4 МБ. Надсилаєш його другові в месенджері, а другові приходить файл розміром 300 КБ. <b>Куди зникли майже 3,7 МБ? І чи можна їх повернути?</b> Відповідь знайдемо наприкінці пояснення.</p>
+    </div>
+    
+    <div><button class="btn" data-go="learn">До пояснення →</button></div>
+  </div>
+</section>
+
+<!-- LEARN -->
+<section class="win" data-panel="learn" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>пояснення.docx</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Новий матеріал</p><h2>Як «запакувати» дані, щоб вони займали менше місця</h2></div>
+
+    <div class="sec">
+      <h3>1. Навіщо стискати дані</h3>
+      <p>Файлів стає дедалі більше, а пам'ять пристроїв і швидкість інтернету обмежені. Подивись, скільки займала б одна хвилина відео з телефона без стиснення:</p>
+      <div class="suit">
+        <div class="a"><span class="eyebrow">1 хв відео 4K без стиснення</span><span class="big2">≈ 42 ГБ</span><span class="hint">3840 × 2160 пікселів × 3 байти × 30 кадрів за секунду × 60 с</span></div>
+        <div class="b"><span class="eyebrow">Та сама хвилина після стиснення</span><span class="big2">≈ 350 МБ</span><span class="hint">Приблизно у 120 разів менше. Саме стільки й записує телефон.</span></div>
+      </div>
+      <p class="def zip"><b>Стиснення даних</b> — це перетворення даних, у результаті якого зменшується їхній обсяг. Зворотний процес, коли зі стиснутих даних отримують вихідні, називають <b>розпакуванням</b>.</p>
+      <p>Стиснення потрібне, щоб:</p>
+      <div class="os-grid">
+        <div class="os-fn"><b>Економити пам'ять</b><span>На флешці, телефоні чи в хмарі вміщується більше файлів.</span></div>
+        <div class="os-fn"><b>Швидше передавати</b><span>Менший файл швидше надсилається поштою чи в месенджері.</span></div>
+        <div class="os-fn"><b>Зберігати впорядковано</b><span>Багато файлів можна зібрати в один архів і зберегти надовго.</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>2. Чому дані взагалі можна стиснути</h3>
+      <p>У більшості даних є <b>надлишковість</b>: повтори, однакові фрагменти, великі ділянки одного кольору, часті й рідкісні символи. Програма для стиснення знаходить ці повтори і записує їх коротше.</p>
+      <div class="ex">ЧЧЧЧЧЧЧЧЧЧ <i>(10 символів)</i> → <b>10Ч</b> <i>(3 символи)</i></div>
+      <p>Скажи вголос «десять чорних пікселів» замість «чорний, чорний, чорний…». Це і є стиснення.</p>
+    </div>
+
+    <div class="sec">
+      <h3>3. Два види стиснення</h3>
+      <div class="kinds2">
+        <div class="ll"><h3>Без втрат</h3>
+          <p>Після розпакування дані відновлюються <b>точно, до біта</b>.</p>
+          <ul><li>тексти, документи, таблиці;</li><li>програми (змінений байт = програма не запуститься);</li><li>архіви файлів.</li></ul>
+          <div class="chips"><span class="chip">ZIP</span><span class="chip">RAR</span><span class="chip">7Z</span><span class="chip">PNG</span><span class="chip">GIF</span><span class="chip">FLAC</span></div>
+        </div>
+        <div class="ly"><h3>З втратами</h3>
+          <p>Частину даних, яку людина майже не помічає, <b>відкидають назавжди</b>. Файл стає набагато меншим.</p>
+          <ul><li>фотографії;</li><li>музика й голос;</li><li>відео, відеодзвінки, стримінг.</li></ul>
+          <div class="chips"><span class="chip">JPEG</span><span class="chip">MP3</span><span class="chip">AAC</span><span class="chip">MP4</span><span class="chip">WebM</span></div>
+        </div>
+      </div>
+      <p class="hint">Стиснення з втратами не можна застосовувати до тексту чи програми. Уяви, що в реченні «Зустрічаємось о 15:00» загубилася одна цифра.</p>
+    </div>
+
+    <div class="sec">
+      <h3>4. Як це працює: три ідеї</h3>
+      <div class="methods">
+        <div><h3>Серії повторів (RLE)</h3><p>Послідовність однакових символів записують як «кількість + символ».</p><div class="ex">ББББЧЧЧБ → <b>4Б3Ч1Б</b></div><p class="hint">Добре стискає малюнки з великими однотонними ділянками. Спробуй у вкладці «Піксельний код».</p></div>
+        <div><h3>Словник</h3><p>Повторювані слова і фрази записують один раз у словник, а в тексті ставлять короткий номер.</p><div class="ex">дощик капає, дощик капає → <b>①, ①</b><br><i>словник: ① = дощик капає</i></div><p class="hint">Так працюють ZIP, 7Z, RAR. Спробуй у вкладці «Стисни текст».</p></div>
+        <div><h3>Короткі коди для частих символів</h3><p>Символи, що трапляються часто, кодують коротше, а рідкісні довше.</p><div class="morse"><span>Е ·</span><span>Т −</span><span>А ·−</span><span>Щ −−·−</span><span>Ю ··−−</span></div><p class="hint">Цю ідею використав ще Семюел Морзе: найчастіша літера Е має найкоротший код.</p></div>
+      </div>
+      
+    </div>
+
+    <div class="sec">
+      <h3>5. Коефіцієнт стиснення</h3>
+      <p>Щоб порівняти, наскільки добре стиснуто файл, обчислюють коефіцієнт стиснення.</p>
+      <div class="formula">
+        <span class="k">k</span><span class="eq">=</span>
+        <span class="frac"><span>обсяг вихідного файлу</span><span>обсяг стиснутого файлу</span></span>
+        <p>Він показує, <b>у скільки разів</b> зменшився файл. Чим більший k, тим краще стиснення. Якщо k = 1, файл не зменшився.</p>
+      </div>
+      <div class="ex">Файл 12 МБ стиснули до 3 МБ: k = 12 : 3 = <b>4</b>. Архів займає 3 : 12 = 25 % від вихідного файлу.</div>
+      <p>Обидва обсяги треба записати в однакових одиницях. Наприклад, 2 МБ і 512 КБ: 2 МБ = 2048 КБ, тому k = 2048 : 512 = 4.</p>
+      <p>Коефіцієнт сильно залежить від типу файлу. Ось типові результати архіватора 7-Zip:</p>
+      <div class="tbl"><table class="plan ktable">
+        <thead><tr><th>Файл</th><th>До</th><th>Після</th><th>k</th></tr></thead>
+        <tbody>
+          <tr><td>Текст (TXT)</td><td>48 КБ</td><td>14 КБ</td><td><span class="kbar" style="width:34px"></span>3,4</td></tr>
+          <tr><td>Малюнок BMP</td><td>2,2 МБ</td><td>270 КБ</td><td><span class="kbar" style="width:80px"></span>8,3</td></tr>
+          <tr><td>Фото JPEG</td><td>3,3 МБ</td><td>3,3 МБ</td><td><span class="kbar" style="width:10px"></span>1,0</td></tr>
+          <tr><td>Пісня MP3</td><td>4,0 МБ</td><td>4,0 МБ</td><td><span class="kbar" style="width:10px"></span>1,0</td></tr>
+        </tbody>
+      </table></div>
+      <p class="hint">Чому JPEG і MP3 майже не стискаються? Вони <b>вже стиснуті</b>, і повторів у них майже не залишилося.</p>
+    </div>
+
+    <div class="sec">
+      <h3>6. Архіви та архіватори</h3>
+      <p class="def zip"><b>Архів</b> — це файл, який містить один або кілька файлів чи папок у стиснутому вигляді, а також відомості про них: імена, розміри, дати створення.</p>
+      <p class="def zip"><b>Архіватор</b> — це програма для створення архівів, перегляду їхнього вмісту та видобування з них файлів.</p>
+      <div class="apps">
+        <span class="chip" data-ico="Архіватор 7-Zip">7-Zip (безкоштовний)</span>
+        <span class="chip" data-ico="WinRAR">WinRAR</span>
+        <span class="chip">🍑 PeaZip (безкоштовний)</span>
+        <span class="chip" data-ico="Windows">вбудований ZIP у Windows</span>
+        <span class="chip">📱 Files, ZArchiver на телефоні</span>
+      </div>
+      <h3>Що вміє архіватор</h3>
+      <div class="ops">
+        <div><b>Створити архів</b><span>Стиснути файли й папки в один файл. Цю дію називають архівуванням або пакуванням.</span></div>
+        <div><b>Розпакувати (видобути)</b><span>Отримати з архіву точні копії файлів.</span></div>
+        <div><b>Переглянути вміст</b><span>Побачити список файлів в архіві без розпакування.</span></div>
+        <div><b>Захистити паролем</b><span>Архів відкриється лише тому, хто знає пароль. Без пароля файли не відновити.</span></div>
+        <div><b>Розбити на томи</b><span>Створити багатотомний архів: кілька частин заданого розміру, наприклад для пошти з обмеженням.</span></div>
+        <div><b>Створити SFX-архів</b><span>Самовидобувний архів має розширення .exe і розпаковує себе сам, без архіватора.</span></div>
+        <div><b>Перевірити цілісність</b><span>Переконатися, що архів не пошкоджено під час копіювання чи завантаження.</span></div>
+      </div>
+      <h3>Поширені формати архівів</h3>
+      <div class="fmts">
+        <div><b>.zip</b><span>Найпоширеніший. Відкривається будь-якою ОС без додаткових програм.</span></div>
+        <div><b>.7z</b><span>Формат 7-Zip. Зазвичай стискає найкраще.</span></div>
+        <div><b>.rar</b><span>Формат WinRAR. Підтримує відновлення пошкоджених архівів.</span></div>
+        <div><b>.tar.gz</b><span>Поширений у Linux.</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>7. Безпечна робота з архівами</h3>
+      <p class="warn"><b>Пам'ятай:</b> зловмисники часто ховають віруси в архівах, бо пошта й месенджери не завжди можуть перевірити їхній вміст. Не відкривай архіви від незнайомців, особливо якщо всередині є файли <b>.exe</b>, <b>.bat</b>, <b>.scr</b>. Перевір архів антивірусом. Пароль від архіву зберігай окремо: якщо його забути, файли не відновить ніхто.</p>
+      <div class="fact2"><b class="t">Цікавий факт: архівна бомба</b><p>Існує архів «42.zip» розміром лише 42 КБ. Якщо розпакувати всі вкладені в нього архіви, вийде 4,5 петабайта даних, а це мільйони гігабайтів. Такі файли створювали, щоб «покласти» антивірусні програми. Сучасні антивіруси вже вміють їх розпізнавати.</p></div>
+    </div>
+
+    <div class="sec">
+      <h3>8. Говоримо українською правильно</h3>
+      <div class="lang">
+        <p><s>сжати файл</s>, <s>зжати файл</s> → <b>стиснути файл</b>, <b>стиснення даних</b></p>
+        <p>«Зжати» українською означає зібрати врожай: <b>жито жнуть, а файли стискають</b>.</p>
+        <p><s>розархівувати</s> (розмовне) → <b>розпакувати</b>, <b>видобути файли з архіву</b></p>
+      </div>
+      <p class="hint">До речі, англійське слово <b>zip</b> означає застібку-блискавку: архів ніби «застібає» файли в щільний пакунок.</p>
+    </div>
+
+    <div class="sec">
+      <h3>9. Поміркуй</h3>
+      <details class="think"><summary>Чи можна стиснути архів ще раз, потім ще раз, і так доти, доки він не стане розміром 1 байт?</summary>
+        <p><b>Ні.</b> Після першого стиснення повторів майже не залишається, тому повторне стиснення майже нічого не дає, а іноді навіть трохи збільшує файл (архіватор додає свої службові дані). Якби можна було стиснути будь-що до 1 байта, то всіх можливих файлів було б лише 256. Насправді їх незліченно більше.</p></details>
+      <details class="think"><summary>Чому скриншот із текстом краще зберігати у PNG, а фото пейзажу в JPEG?</summary>
+        <p>PNG стискає без втрат, тому літери на скриншоті залишаються чіткими. JPEG стискає з втратами: на фото пейзажу цього майже не видно, а файл стає в кілька разів меншим. Якщо зберегти текст у JPEG, навколо літер з'являться «бруднуваті» плями.</p></details>
+      <details class="think" open><summary>Відповідь на проблемне питання: куди зникли 3,7 МБ фото?</summary>
+        <p>Месенджер <b>стиснув фото з втратами</b>: зменшив кількість пікселів і відкинув дрібні деталі, які на екрані телефона майже непомітні. Ці дані видалено назавжди, повернути їх не можна. Щоб друг отримав оригінал, надсилай фото <b>як файл (документ)</b> або запакуй його в архів: архіватор стискає без втрат.</p></details>
+    </div>
+    <div><button class="btn" data-go="rle">До піксельного коду →</button></div>
+  </div>
+</section>
+
+<!-- RLE -->
+<section class="win" data-panel="rle" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>піксельний_код.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 1 · метод RLE</p><h2>Піксельний код</h2></div>
+    <p class="hint">Малюй на полі мишкою або пальцем. Праворуч одразу з'являється RLE-код кожного рядка: «3Б» означає «три білі пікселі». Спробуй намалювати картинку, яка стиснеться якнайкраще, а потім таку, яка стиснеться погано.</p>
+    <div class="rle">
+      <div class="rle-left">
+        <div class="pal" id="rlePal" aria-label="Палітра"></div>
+        <div class="rgrid" id="rleGrid"></div>
+        <div class="presets" id="rlePresets"></div>
+      </div>
+      <div style="display:grid;gap:12px;min-width:0">
+        <div class="stats">
+          <div class="stat"><span>Без стиснення</span><b id="rleRaw">100</b></div>
+          <div class="stat"><span>RLE-код</span><b id="rleLen">0</b></div>
+          <div class="stat" id="rleKBox"><span>Коефіцієнт k</span><b id="rleK">0</b></div>
+        </div>
+        <p class="verdict" id="rleVerdict"></p>
+        <div class="rcode" id="rleCode" aria-live="polite"></div>
+        <p class="hint">Рахуємо символи: кожен піксель без стиснення — це 1 символ (літера кольору). У коді «12Б» три символи.</p>
+      </div>
+    </div>
+    
+
+    <div class="sec">
+      <div><p class="eyebrow">Вправа 2</p><h2>Розшифруй малюнок</h2></div>
+      <p class="hint">Комп'ютер отримав RLE-код. Відтвори за ним малюнок: обери колір і натискай на клітинки. Потім натисни «Перевірити».</p>
+      <div class="rle">
+        <div class="rle-left">
+          <div class="pal" id="puzPal"></div>
+          <div class="rgrid" id="puzGrid"></div>
+        </div>
+        <div style="display:grid;gap:12px;align-content:start;min-width:0">
+          <div class="puz-code" id="puzCode"></div>
+          <div class="row-btns"><button class="btn" id="puzCheck">Перевірити</button><button class="btn ghost" id="puzClear">Очистити</button></div>
+          <p class="toast" id="puzMsg" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+    <div><button class="btn" data-go="text">Далі: Стисни текст →</button></div>
+  </div>
+</section>
+
+<!-- TEXT -->
+<section class="win" data-panel="text" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>стисни_текст.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 3 · словниковий метод</p><h2>Стисни текст, як це робить ZIP</h2></div>
+    <p class="hint">Архіватор шукає фрагменти, що повторюються, записує їх у словник і замінює коротким номером. Натискай «Крок стиснення» і стеж, як зменшується текст. Можеш вставити свій текст.</p>
+    <div class="presets" id="tcPresets"></div>
+    <textarea class="tc-in" id="tcIn" aria-label="Текст для стиснення"></textarea>
+    <div class="row-btns"><button class="btn" id="tcStep">Крок стиснення</button><button class="btn ghost" id="tcAll">Стиснути все</button><button class="btn ghost" id="tcUnpack">Розпакувати</button><button class="btn ghost" id="tcReset">Почати знову</button></div>
+    <p class="toast" id="tcMsg" aria-live="polite"></p>
+    <div class="stats">
+      <div class="stat"><span>Було символів</span><b id="tcRaw">0</b></div>
+      <div class="stat"><span>Стало: текст + словник</span><b id="tcNow">0</b></div>
+      <div class="stat" id="tcKBox"><span>Коефіцієнт k</span><b id="tcK">1</b></div>
+    </div>
+    <div class="tc-out" id="tcOut"></div>
+    <div class="note"><h3>Словник</h3><div class="dict" id="tcDict"><span class="hint">Поки порожній.</span></div></div>
+
+    <div class="sec">
+      <div><p class="eyebrow">Вправа 4 · метод RLE для тексту</p><h3>Серії однакових символів</h3></div>
+      <p class="hint">Введи рядок. Програма замінить кожну серію однакових символів на «кількість + символ». Спробуй «ААААААББББВ», а потім «ПРИВІТ». Що сталося?</p>
+      <input class="tc-in" id="rtIn" value="ААААААББББВ" aria-label="Рядок для RLE" autocomplete="off">
+      <div class="tc-out" id="rtOut"></div>
+      <p class="verdict" id="rtVerdict"></p>
+    </div>
+    <div><button class="btn" data-go="jpeg">Далі: Фото-лабораторія →</button></div>
+  </div>
+</section>
+
+<!-- JPEG -->
+<section class="win" data-panel="jpeg" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>фото_лабораторія.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 5 · стиснення з втратами</p><h2>Фото-лабораторія JPEG</h2></div>
+    <p class="hint">Тут картинку справді стискає твій браузер у формат JPEG. Рухай повзунок «Якість» і стеж за розміром файлу. У збільшеному фрагменті добре видно, що саме «загубилося». Наведи або натисни на картинку, щоб обрати фрагмент.</p>
+    <div class="jp">
+      <div style="display:grid;gap:10px;min-width:0">
+        <div class="jp-view" id="jpView"><img id="jpImg" alt="Стиснена картинка"><div class="lens" id="jpLens"></div></div>
+        <div class="row-btns">
+          <label class="file-btn">📷 Своє фото<input type="file" accept="image/*" id="jpFile"></label>
+          <button class="btn ghost" id="jpDemo">Тестова картинка</button>
+          <button class="btn ghost" id="jpHold">Утримуй, щоб побачити оригінал</button>
+        </div>
+        <p class="hint">Твоє фото нікуди не надсилається: усе відбувається на цьому пристрої.</p>
+      </div>
+      <div class="jp-side">
+        <div class="range"><label for="jpQ">Якість JPEG <b id="jpQv">80</b></label><input type="range" id="jpQ" min="1" max="100" value="80"></div>
+        <div class="qbtns" id="jpQuick"></div>
+        <canvas class="zoom" id="jpZoom" width="240" height="160"></canvas>
+        <div class="jp-stats">
+          <div class="stat"><span>Без стиснення (BMP)</span><b id="jpRaw">…</b></div>
+          <div class="stat"><span>Без втрат (PNG)</span><b id="jpPng">…</b></div>
+          <div class="stat good"><span>З втратами (JPEG)</span><b id="jpJpg">…</b></div>
+          <div class="stat"><span>k порівняно з BMP</span><b id="jpK">…</b></div>
+        </div>
+      </div>
+    </div>
+    <p class="verdict" id="jpVerdict"></p>
+    <details class="think"><summary>Що помітив? Перевір себе</summary>
+      <p>Навіть за якості 70–80 картинка виглядає майже так само, а файл у 10–20 разів менший, ніж без стиснення. За дуже низької якості з'являються квадратики 8 × 8 пікселів, кольори «пливуть», а навколо тексту та різких меж з'являються плями. Відкинуті деталі не повертаються, навіть якщо потім зберегти фото з якістю 100.</p></details>
+    
+    <div><button class="btn" data-go="arch">Далі: Архіватор →</button></div>
+  </div>
+</section>
+
+<!-- ARCHIVER -->
+<section class="win" data-panel="arch" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>архіватор.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 6 · модель архіватора 7-Zip</p><h2>Пригоди в архіваторі</h2></div>
+    <p class="hint">Перед тобою модель архіватора. Обери файли (натисни на рядок), а потім кнопку на панелі інструментів. Виконуй завдання зі списку в будь-якому порядку.</p>
+    <div class="qbanner" id="aqBanner" aria-live="polite"></div>
+    <div class="arch-quest">
+      <div class="zw" id="zw">
+        <div class="zw-title"><span id="zwIco"></span>Архіватор 7-Zip (модель)</div>
+        <div class="zw-tb">
+          <button id="zwAdd"><i>➕</i>Додати</button>
+          <button id="zwExt"><i>📤</i>Видобути</button>
+          <button id="zwTest"><i>✔️</i>Перевірити</button>
+          <button id="zwInfo"><i>ℹ️</i>Інфо</button>
+          <button id="zwDel"><i>🗑️</i>Видалити</button>
+        </div>
+        <div class="zw-path">C:\Users\Учень\Documents\Проєкт\</div>
+        <div class="zw-scroll"><table class="zw-list"><thead><tr><th>Ім'я</th><th class="num">Розмір</th><th class="num hm">Стиснуто</th><th class="hm">Тип</th></tr></thead><tbody id="zwBody"></tbody></table></div>
+        <div class="zw-status"><span id="zwSel">Нічого не вибрано</span><span id="zwTot"></span></div>
+        <div class="zw-dlg" id="zwDlg" hidden><div class="zw-box" id="zwBox"></div></div>
+      </div>
+      <div class="qlist">
+        <div class="bar-row"><h3>Завдання</h3><span class="score" id="aqScore"></span></div>
+        <ol id="aqList"></ol>
+        <button class="btn ghost" id="zwReset">Почати знову</button>
+      </div>
+    </div>
+    
+    <div><button class="btn" data-go="sort">Далі: Без втрат чи з втратами? →</button></div>
+  </div>
+</section>
+
+<!-- SORT -->
+<section class="win" data-panel="sort" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>без_втрат.exe</div>
+  <div class="win-body" id="sortBody" data-next="coef">
+    <div><p class="eyebrow">Вправа 7</p><h2>Без втрат чи з втратами?</h2></div>
+    <p class="hint">Як стискають ці дані? Подивись на картку і <b>натисни відповідну кнопку</b>.</p>
+    <div class="progress"><span id="sortProg"></span></div>
+    <div class="fcard" id="fcard"></div>
+    <p class="toast" id="sortToast" aria-live="polite"></p>
+    <div class="kbtns k2">
+      <button class="kbtn sys" data-cat="ll"><b>Без втрат</b><span>відновлюється точно</span></button>
+      <button class="kbtn app" data-cat="ly"><b>З втратами</b><span>частину деталей відкинуто</span></button>
+    </div>
+  </div>
+  <div class="win-body" id="sortDone" hidden></div>
+</section>
+
+<!-- COEF -->
+<section class="win" data-panel="coef" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>коефіцієнт.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 8 · задачі</p><h2>Обчисли коефіцієнт стиснення</h2></div>
+    <div class="formula"><span class="k">k</span><span class="eq">=</span><span class="frac"><span>V вихідного</span><span>V стиснутого</span></span><p>Звідси: V стиснутого = V вихідного : k, а V вихідного = V стиснутого · k. Не забудь перевести обсяги в однакові одиниці: 1 МБ = 1024 КБ.</p></div>
+    <div id="cfBox"></div>
+    <div id="cfNext" hidden><button class="btn" data-go="words">Далі: Словничок →</button></div>
+  </div>
+</section>
+
+<!-- WORDS -->
+<section class="win" data-panel="words" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>словничок.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Вправа 9 · English</p><h2>Українсько-англійський словничок</h2></div>
+    <p class="hint">Натисни англійське слово, а потім його переклад українською. Ці слова ти побачиш в англомовних програмах.</p>
+    <div class="pairs"><div class="pcol" id="pEn"></div><div class="pcol" id="pUa"></div></div>
+    <div class="bar-row"><p class="toast" id="pMsg" aria-live="polite"></p><div style="display:flex;gap:10px;align-items:center"><span class="score" id="pScore"></span><button class="btn ghost" id="pReset">Почати знову</button></div></div>
+    <div id="pNext" hidden><button class="btn" data-go="quiz">Далі: Вікторина →</button></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section class="win" data-panel="quiz" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>вікторина.exe</div>
+  <div class="win-body" id="quiz" data-set="lesson"></div>
+</section>
+
+<!-- PRACTICE -->
+<section class="win" data-panel="practice" hidden>
+  <div class="win-head"><span class="dots"><i></i><i></i><i></i></span>практична_робота.exe</div>
+  <div class="win-body">
+    <div><p class="eyebrow">Практична робота</p><h2>Створюємо архіви та порівнюємо стиснення</h2></div>
+    <p class="lead">Мета: навчитися створювати архіви і видобувати з них файли, захищати архів паролем та з'ясувати, які файли стискаються найкраще.</p>
+    <p class="warn"><b>Пам'ятай правила безпеки:</b> сиди рівно на відстані 50–70 см від монітора, не торкайся дротів і розеток. Працюй лише у своїй папці, нічого не встановлюй і не видаляй без дозволу вчителя.</p>
+    <div class="steps" id="steps">
+      <div class="step"><div><h3>Створи робочу папку</h3>
+        <p>У папці, яку вкаже вчитель, створи папку <span class="path">Стиснення_Прізвище</span>.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Створи текстовий файл</h3>
+        <p>Відкрий <span class="path">Блокнот</span>, напиши два-три речення про себе. Виділи текст <span class="path">Ctrl + A</span>, скопіюй <span class="path">Ctrl + C</span> і встав <span class="path">Ctrl + V</span> ще 20 разів. Збережи як <span class="path">текст.txt</span> у своїй папці.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Збережи малюнок у двох форматах</h3>
+        <p>У <span class="path">Paint</span> намалюй простий малюнок із великими одноколірними ділянками. Збережи його двічі: як <span class="path">малюнок.bmp</span> (тип «24-розрядний точковий малюнок») і як <span class="path">малюнок.png</span>.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Додай фото</h3>
+        <p>Скопіюй у свою папку будь-яке фото у форматі JPG (наприклад, із папки <span class="path">Зображення</span>) і назви його <span class="path">фото.jpg</span>.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Заархівуй кожен файл окремо</h3>
+        <p>Клацни файл правою кнопкою миші та обери <span class="path">7-Zip → Додати до «текст.7z»</span>. Повтори для інших трьох файлів. Розміри файлів дивись у Провіднику в поданні «Таблиця» або у властивостях файлу. Запиши їх у таблицю нижче.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Створи архів із паролем</h3>
+        <p>Виділи всі чотири файли, клацни правою кнопкою і обери <span class="path">7-Zip → Додати до архіву…</span>. Вибери формат <span class="path">zip</span>, введи пароль і натисни ОК. Спробуй відкрити будь-який файл з архіву: програма попросить пароль.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+      <div class="step"><div><h3>Видобудь файли</h3>
+        <p>Клацни архів із паролем правою кнопкою і обери <span class="path">7-Zip → Розпакувати в «…\»</span>. Введи пароль. Порівняй розміри видобутих файлів з оригіналами: вони мають збігатися до байта.</p>
+        <label><input type="checkbox"> Виконано</label></div></div>
+    </div>
+    <div class="sec">
+      <h3>Таблиця результатів</h3>
+      <p class="hint">Введи розміри в кілобайтах. Коефіцієнт обчислиться автоматично. Перепиши таблицю в зошит.</p>
+      <div class="tbl"><table class="sheet" id="pSheet"><thead><tr><th>Файл</th><th>Розмір файлу, КБ</th><th>Розмір архіву, КБ</th><th>k</th></tr></thead><tbody></tbody></table></div>
+      <p class="concl" id="pConcl"></p>
+    </div>
+    <div class="sec">
+      <h3>Запиши в зошит висновок</h3>
+      <ol class="nb">
+        <li>Який файл стиснувся найкраще? Чому?</li>
+        <li>Чому фото JPG і малюнок PNG майже не зменшилися?</li>
+        <li>Чим відрізняються стиснення з втратами і без втрат?</li>
+      </ol>
+    </div>
+    <p class="score" id="stScore"></p>
+    <div class="note">
+      <h3>Якщо на комп'ютері немає 7-Zip</h3>
+      <ul>
+        <li><b>Windows 11:</b> клацни файл правою кнопкою і обери <span class="path">Стиснути до ZIP-файлу</span>. Щоб розпакувати, обери <span class="path">Видобути все</span>.</li>
+        <li><b>Windows 10:</b> <span class="path">Надіслати → Стиснута ZIP-папка</span>.</li>
+        <li><b>Linux:</b> клацни файл правою кнопкою і обери <span class="path">Стиснути…</span>, а для розпакування <span class="path">Видобути сюди</span>.</li>
+        <li>Вбудований ZIP у Windows не вміє ставити пароль. Для кроку 6 потрібен 7-Zip або інший архіватор.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+</main>
+
+
+<script>
+(function(){
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+function mono(n){return n.replace(/[^A-Za-zА-Яа-яІіЇїЄєҐґ0-9]/g,"").slice(0,2).toUpperCase();}
+const ICONS={"Архіватор 7-Zip": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#1a1a1a\"/><path transform=\"translate(10 10) scale(1.1667)\" fill=\"#fff\" d=\"M0 18.858h24V8.181H10.717V5.142H0ZM2.021 7.271h6.657v1.994c-1.74 2.09-2.84 4.502-2.948 7.404H3.477c.09-2.501.353-4.954 2.283-6.994l.033-.033H2.021Zm8.45 1.253h13.215v10.143H10.47Zm6.01 1.213v6.871h1.482v-6.87Zm2.755.043v6.912h1.616v-2.42h1.029c.43-.001.754-.29.969-.716.427-.848.429-2.257-.024-3.092-.227-.419-.571-.697-1.033-.684zm-7.924.002v1.596h2.217l-2.304 3.736v1.54h4.287V15.1h-2.698l2.786-3.909v-1.41Zm9.452 1.512h.595c.164-.006.287.081.371.217.17.273.172.736.004.99a.364.364 0 0 1-.373.176l-.55.047z\"/></svg>"], "WinRAR": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#5b2a86\"/><rect x=\"11\" y=\"8\" width=\"26\" height=\"10\" rx=\"2\" fill=\"#e94f64\"/><rect x=\"11\" y=\"19\" width=\"26\" height=\"10\" rx=\"2\" fill=\"#3fa9f5\"/><rect x=\"11\" y=\"30\" width=\"26\" height=\"10\" rx=\"2\" fill=\"#5ec269\"/><rect x=\"20\" y=\"6\" width=\"8\" height=\"36\" rx=\"2\" fill=\"#d9b44a\"/><rect x=\"21.5\" y=\"20\" width=\"5\" height=\"8\" rx=\"1\" fill=\"#7a5a12\"/></svg>"], "Блокнот": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#3b8ed0\"/><rect x=\"11\" y=\"8\" width=\"26\" height=\"33\" rx=\"2\" fill=\"#fff\"/><rect x=\"11\" y=\"8\" width=\"26\" height=\"6\" fill=\"#9fd0f5\"/><path d=\"M15 19h18M15 24h18M15 29h18M15 34h12\" stroke=\"#6b7a90\" stroke-width=\"1.6\"/></svg>"], "Paint": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#fff\" stroke=\"#d5dce7\" stroke-width=\"2\"/><path d=\"M24 8C14 8 7 15 7 23c0 9 8 16 17 16 3 0 4-2 3-4-1-2 0-4 3-4h4c5 0 8-3 8-8 0-8-8-15-18-15z\" fill=\"#f4d9a8\" stroke=\"#b07a2a\" stroke-width=\"1.5\"/><circle cx=\"15\" cy=\"20\" r=\"3.4\" fill=\"#e53935\"/><circle cx=\"22\" cy=\"14\" r=\"3.4\" fill=\"#fbc02d\"/><circle cx=\"31\" cy=\"15\" r=\"3.4\" fill=\"#43a047\"/><circle cx=\"35\" cy=\"23\" r=\"3.4\" fill=\"#1e88e5\"/><circle cx=\"16\" cy=\"29\" r=\"3.4\" fill=\"#8e24aa\"/></svg>"], "Мої документи": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#fff3c4\"/><path d=\"M8 15h12l3 3h17v20H8z\" fill=\"#f2b632\"/><path d=\"M8 20h32v18H8z\" fill=\"#ffd166\"/></svg>"], "Telegram": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#26A5E4\"/><path transform=\"translate(10 10) scale(1.1667)\" fill=\"#fff\" d=\"M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z\"/></svg>"], "Viber": ["tile", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" rx=\"11\" fill=\"#7360F2\"/><path transform=\"translate(10 10) scale(1.1667)\" fill=\"#fff\" d=\"M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.326 6.812-.416 7.15-.525.776-.252 5.176-.816 5.892-6.657.74-6.02-.36-9.83-2.34-11.546-.596-.55-3.006-2.3-8.375-2.323 0 0-.395-.025-1.037-.017zm.058 1.693c.545-.004.88.017.88.017 4.542.02 6.717 1.388 7.222 1.846 1.675 1.435 2.53 4.868 1.906 9.897v.002c-.604 4.878-4.174 5.184-4.832 5.395-.28.09-2.882.737-6.153.524 0 0-2.436 2.94-3.197 3.704-.12.12-.26.167-.352.144-.13-.033-.166-.188-.165-.414l.02-4.018c-4.762-1.32-4.485-6.292-4.43-8.895.054-2.604.543-4.738 1.996-6.173 1.96-1.773 5.474-2.018 7.11-2.03zm.38 2.602c-.167 0-.303.135-.304.302 0 .167.133.303.3.305 1.624.01 2.946.537 4.028 1.592 1.073 1.046 1.62 2.468 1.633 4.334.002.167.14.3.307.3.166-.002.3-.138.3-.304-.014-1.984-.618-3.596-1.816-4.764-1.19-1.16-2.692-1.753-4.447-1.765zm-3.96.695c-.19-.032-.4.005-.616.117l-.01.002c-.43.247-.816.562-1.146.932-.002.004-.006.004-.008.008-.267.323-.42.638-.46.948-.008.046-.01.093-.007.14 0 .136.022.27.065.4l.013.01c.135.48.473 1.276 1.205 2.604.42.768.903 1.5 1.446 2.186.27.344.56.673.87.984l.132.132c.31.308.64.6.984.87.686.543 1.418 1.027 2.186 1.447 1.328.733 2.126 1.07 2.604 1.206l.01.014c.13.042.265.064.402.063.046.002.092 0 .138-.008.31-.036.627-.19.948-.46.004 0 .003-.002.008-.005.37-.33.683-.72.93-1.148l.003-.01c.225-.432.15-.842-.18-1.12-.004 0-.698-.58-1.037-.83-.36-.255-.73-.492-1.113-.71-.51-.285-1.032-.106-1.248.174l-.447.564c-.23.283-.657.246-.657.246-3.12-.796-3.955-3.955-3.955-3.955s-.037-.426.248-.656l.563-.448c.277-.215.456-.737.17-1.248-.217-.383-.454-.756-.71-1.115-.25-.34-.826-1.033-.83-1.035-.137-.165-.31-.265-.502-.297zm4.49.88c-.158.002-.29.124-.3.282-.01.167.115.312.282.324 1.16.085 2.017.466 2.645 1.15.63.688.93 1.524.906 2.57-.002.168.13.306.3.31.166.003.305-.13.31-.297.025-1.175-.334-2.193-1.067-2.994-.74-.81-1.777-1.253-3.05-1.346h-.024zm.463 1.63c-.16.002-.29.127-.3.287-.008.167.12.31.288.32.523.028.875.175 1.113.422.24.245.388.62.416 1.164.01.167.15.295.318.287.167-.008.295-.15.287-.317-.03-.644-.215-1.178-.58-1.557-.367-.378-.893-.574-1.52-.607h-.018z\"/></svg>"], "Windows": ["logo", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128\"><path fill=\"#0078d4\" d=\"M67.328 67.331h60.669V128H67.328zm-67.325 0h60.669V128H.003zM67.328 0h60.669v60.669H67.328zM.003 0h60.669v60.669H.003z\"/></svg>"]};
+function ico(n){const v=ICONS[n];if(!v)return `<span class="mono">${mono(n)}</span>`;return `<img class="ico ${v[0]}" alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(v[1])}">`;}
+$$("[data-ico]").forEach(c=>c.insertAdjacentHTML("afterbegin",ico(c.dataset.ico)));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const nf=(x,d=1)=>x.toLocaleString("uk-UA",{maximumFractionDigits:d});
+function fmtKB(kb){if(kb>=1024)return nf(kb/1024,1)+" МБ";return nf(kb,kb<10?1:0)+" КБ";}
+const pl=(n,a,b,c)=>{const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<12||h>14)?b:c;};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* tabs */
+const tabs=$$(".tab"), panels=$$("[data-panel]");
+const FIRST=panels[0].dataset.panel;
+function show(id){
+  if(!panels.some(p=>p.dataset.panel===id)) id=FIRST;
+  tabs.forEach(t=>t.setAttribute("aria-selected",t.dataset.tab===id));
+  panels.forEach(p=>p.hidden=p.dataset.panel!==id);
+  try{history.replaceState(null,"","#"+id)}catch(e){}
+  window.scrollTo({top:0});
+  const t=tabs.find(t=>t.dataset.tab===id);if(t&&t.scrollIntoView)t.scrollIntoView({block:"nearest",inline:"nearest"});
+  document.dispatchEvent(new CustomEvent("panel",{detail:id}));
+}
+tabs.forEach(t=>t.addEventListener("click",()=>show(t.dataset.tab)));
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]"); if(g) show(g.dataset.go);});
+
+/* ===== warm-up ===== */
+const WARM=[["Скільки бітів в одному байті?","8 бітів."],["Скільки кілобайтів в одному мегабайті?","1024 КБ. А в 1 ГБ — 1024 МБ."],["Що таке кодування даних?","Подання даних за допомогою певної системи знаків (коду), наприклад двійкового коду з нулів та одиниць."],["Скільки пам'яті потрібно, щоб закодувати одну літеру тексту?","Зазвичай 1 байт. У кодуванні UTF-8 українські літери займають 2 байти."],["Чому фото з телефона займає кілька мегабайтів?","Воно складається з мільйонів пікселів, а колір кожного пікселя кодується трьома байтами."],["Як передати другові файл, що не вміщується в повідомлення?","Через хмарне сховище, флешку… Сьогодні дізнаємося ще один спосіб: стиснути його."]];
+const warm=$("#warm");
+if(warm){WARM.forEach(([q,a],i)=>{const b=document.createElement("button");b.className="wcard";b.innerHTML=`<span class="n">Питання ${i+1}</span><span class="wq">${q}</span><span class="wa hide">Натисни, щоб побачити відповідь</span>`;
+  b.onclick=()=>{const o=b.classList.toggle("open");const w=$(".wa",b);w.textContent=o?a:"Натисни, щоб побачити відповідь";w.classList.toggle("hide",!o);};warm.appendChild(b);});}
+
+/* ===== RLE helpers ===== */
+const PAL=[["Б","#ffffff","білий","#1b2433"],["Ч","#1b2433","чорний","#fff"],["К","#e23b3b","червоний","#fff"],["Ж","#f6c343","жовтий","#1b2433"],["С","#2f6fe4","синій","#fff"],["З","#2fa84f","зелений","#fff"]];
+const COL=Object.fromEntries(PAL.map(p=>[p[0],p[1]]));
+const N=10;
+function pic(rows){return rows.map(r=>[...r.replace(/\./g,"Б")]);}
+function runs(row){const out=[];for(const c of row){const l=out[out.length-1];if(l&&l[1]===c)l[0]++;else out.push([1,c]);}return out;}
+function runLen(rs){return rs.reduce((a,r)=>a+String(r[0]).length+1,0);}
+function codeStr(rs){return rs.map(r=>{const p=PAL.find(x=>x[0]===r[1]);return `${r[0]}<em class="cl" style="background:${p[1]};color:${p[3]}" title="${p[2]}">${r[1]}</em>`;}).join(" ");}
+function makePal(box,onPick,used){
+  let cur=used?used[0]:"Ч";
+  const list=used?PAL.filter(p=>used.includes(p[0])):PAL;
+  box.innerHTML=list.map(p=>`<button style="background:${p[1]};color:${p[3]}" data-c="${p[0]}" aria-pressed="${p[0]===cur}" title="${p[2]}" aria-label="${p[2]}">${p[0]}</button>`).join("");
+  $$("button",box).forEach(b=>b.onclick=()=>{cur=b.dataset.c;$$("button",box).forEach(x=>x.setAttribute("aria-pressed",x===b));onPick&&onPick(cur);});
+  return ()=>cur;
+}
+function makeGrid(box,getColor,onChange){
+  box.innerHTML="";const cells=[];
+  for(let i=0;i<N*N;i++){const b=document.createElement("button");b.className="px";b.dataset.i=i;b.setAttribute("aria-label",`Рядок ${Math.floor(i/N)+1}, клітинка ${i%N+1}`);box.appendChild(b);cells.push(b);}
+  let painting=false;
+  const paint=el=>{if(!el||!el.classList.contains("px")||box.classList.contains("lock"))return;const c=getColor();if(el.dataset.c===c)return;el.dataset.c=c;el.style.background=COL[c];el.classList.remove("bad");onChange&&onChange(+el.dataset.i);};
+  box.addEventListener("pointerdown",e=>{painting=true;paint(e.target.closest(".px"));e.preventDefault();});
+  box.addEventListener("pointermove",e=>{if(!painting)return;paint(document.elementFromPoint(e.clientX,e.clientY));});
+  window.addEventListener("pointerup",()=>painting=false);window.addEventListener("pointercancel",()=>painting=false);
+  box.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){paint(e.target.closest(".px"));e.preventDefault();}});
+  return {cells,set(m){cells.forEach((c,i)=>{const v=m[Math.floor(i/N)][i%N];c.dataset.c=v;c.style.background=COL[v];c.classList.remove("bad");});},
+    get(){const m=[];for(let r=0;r<N;r++)m.push(cells.slice(r*N,r*N+N).map(c=>c.dataset.c));return m;}};
+}
+const PICS={
+  "Серце":["..........",".KK....KK.","KKKK..KKKK","KKKKKKKKKK","KKKKKKKKKK",".KKKKKKKK.","..KKKKKK..","...KKKK...","....KK....",".........."],
+  "Смайлик":["...ЖЖЖЖ...","..ЖЖЖЖЖЖ..",".ЖЖЧЖЖЧЖЖ.","ЖЖЖЧЖЖЧЖЖЖ","ЖЖЖЖЖЖЖЖЖЖ","ЖЧЖЖЖЖЖЖЧЖ","ЖЖЧЖЖЖЖЧЖЖ",".ЖЖЧЧЧЧЖЖ.","..ЖЖЖЖЖЖ..","...ЖЖЖЖ..."],
+  "Ялинка":["....ЖЖ....","....ЗЗ....","...ЗЗЗЗ...","..ЗЗЗЗЗЗ..","...ЗЗЗЗ...","..ЗЗКЗЗЗ..",".ЗЗЗЗЗЗКЗ.","ЗЗКЗЗЗЗЗЗЗ","....ЧЧ....","....ЧЧ...."],
+  "Прапор":["СССССССССС","СССССССССС","СССССССССС","СССССССССС","СССССССССС","ЖЖЖЖЖЖЖЖЖЖ","ЖЖЖЖЖЖЖЖЖЖ","ЖЖЖЖЖЖЖЖЖЖ","ЖЖЖЖЖЖЖЖЖЖ","ЖЖЖЖЖЖЖЖЖЖ"],
+  "Шахівниця":Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2?"Ч":".").join("")),
+  "Чисте поле":Array(10).fill("..........")
+};
+for(const k in PICS)PICS[k]=pic(PICS[k].map(r=>r.replace(/K/g,"К")));
+const PUZ_LESSON=[{name:"Будиночок",m:pic(["....КК....","...КККК...","..КККККК..",".КККККККК.","..ЖЖЖЖЖЖ..","..ЖСЖЖСЖ..","..ЖСЖЖСЖ..","..ЖЖЧЧЖЖ..","..ЖЖЧЧЖЖ..","ЗЗЗЗЗЗЗЗЗЗ"])}];
+const PUZ_HOME=[
+  {name:"Грибок",m:pic(["...КККК...","..ККБККК..",".КККККБКК.",".КБКККККК.","КККККККККК","...ЖЖЖЖ...","...ЖЖЖЖ...","...ЖЖЖЖ...","...ЖЖЖЖ...","ЗЗЗЗЗЗЗЗЗЗ"])},
+  {name:"Кораблик",m:pic(["....Ч.....","....ЧК....","....ЧКК...","....ЧККК..","....Ч.....","ЖЖЖЖЖЖЖЖЖЖ",".ЖЖЖЖЖЖЖЖ.","..ЖЖЖЖЖЖ..","СССССССССС","СССССССССС"])}
+];
+
+/* ===== RLE editor ===== */
+if($("#rleGrid")){
+  let getC=makePal($("#rlePal"));
+  const g=makeGrid($("#rleGrid"),()=>getC(),upd);
+  $("#rlePresets").innerHTML=Object.keys(PICS).map(k=>`<button data-p="${k}">${k}</button>`).join("");
+  $$("#rlePresets button").forEach(b=>b.onclick=()=>{g.set(PICS[b.dataset.p]);upd();});
+  function upd(i){
+    const m=g.get();let tot=0;
+    $("#rleCode").innerHTML=m.map((row,r)=>{const rs=runs(row);tot+=runLen(rs);return `<div class="${i!==undefined&&Math.floor(i/N)===r?"hl":""}">${codeStr(rs)}</div>`;}).join("");
+    const k=100/tot;
+    $("#rleLen").textContent=tot;$("#rleK").textContent=nf(k,2);
+    $("#rleKBox").className="stat "+(k>1.001?"good":k<0.999?"bad":"");
+    const v=$("#rleVerdict");
+    if(k>1.001){v.className="verdict good";v.textContent=`Стиснення вдалося: код у ${nf(k,2)} раза коротший за малюнок.`;}
+    else if(k<0.999){v.className="verdict bad";v.textContent=`Код довший за сам малюнок! Коли повторів мало, RLE лише збільшує обсяг.`;}
+    else{v.className="verdict";v.textContent="Код такої самої довжини, як малюнок: виграшу немає.";}
+  }
+  g.set(PICS["Серце"]);upd();
+}
+
+/* ===== RLE puzzles ===== */
+let puzSolved=0,puzFirst=0,puzChecks=0;
+if($("#puzGrid")){
+  const home=!!$("#puzNo"), LIST=home?PUZ_HOME:PUZ_LESSON;
+  let pi=0, checksThis=0;
+  let getC;
+  const g=makeGrid($("#puzGrid"),()=>getC(),()=>{});
+  function load(){
+    const P=LIST[pi];checksThis=0;
+    const used=[...new Set(P.m.flat())].sort((a,b)=>PAL.findIndex(p=>p[0]===a)-PAL.findIndex(p=>p[0]===b));
+    if(!used.includes("Б"))used.unshift("Б");
+    getC=makePal($("#puzPal"),null,used.filter(c=>c!=="Б").concat("Б"));
+    g.set(pic(Array(10).fill("..........")));$("#puzGrid").classList.remove("lock");
+    $("#puzCode").innerHTML=P.m.map(r=>`<div>${codeStr(runs(r))}</div>`).join("");
+    if(home)$("#puzNo").textContent=`Малюнок ${pi+1} з ${LIST.length}`;
+    msg("");
+  }
+  function msg(t,c){const e=$("#puzMsg");e.textContent=t;e.className="toast "+(c||"");}
+  $("#puzClear").onclick=()=>{if($("#puzGrid").classList.contains("lock"))return;g.set(pic(Array(10).fill("..........")));msg("");};
+  $("#puzCheck").onclick=()=>{
+    const P=LIST[pi];
+    if($("#puzGrid").classList.contains("lock")){ if(pi+1<LIST.length){pi++;load();$("#puzCheck").textContent="Перевірити";} return; }
+    const m=g.get();let bad=0;
+    g.cells.forEach((c,i)=>{const ok=c.dataset.c===P.m[Math.floor(i/N)][i%N];c.classList.toggle("bad",!ok);if(!ok)bad++;});
+    $$("#puzCode div").forEach((d,r)=>d.classList.toggle("ok",m[r].every((c,j)=>c===P.m[r][j])));
+    checksThis++;puzChecks++;
+    if(!bad){
+      puzSolved++;if(checksThis===1)puzFirst++;
+      $("#puzGrid").classList.add("lock");
+      msg(`Правильно! Це ${P.name.toLowerCase()}. ${checksThis===1?"З першої спроби!":`Перевірок: ${checksThis}.`}`,"good");
+      if(pi+1<LIST.length)$("#puzCheck").textContent="Наступний малюнок →";
+      else{$("#puzCheck").textContent="Готово ✓";if($("#puzNext"))$("#puzNext").hidden=false;}
+    }else msg(`Помилок: ${bad} ${bad===1?"клітинка":bad<5?"клітинки":"клітинок"} (обведено червоним). Зелені рядки вже правильні.`,"bad");
+  };
+  load();
+  var PUZ_TOTAL=LIST.length;
+}
+
+/* ===== text: dictionary compression ===== */
+if($("#tcIn")){
+  const TOK="①②③④⑤⑥⑦⑧⑨";
+  const PRE={
+    "Котик":"Котик спить на дивані. Котик спить і мурчить. Котик спить, а мишка біжить. Котик спить на дивані, котик спить і мурчить.",
+    "Пісенька дощу":"Кап-кап-кап, дощик капає. Кап-кап-кап, дощик капає. Кап-кап-кап, по калюжах скаче. Кап-кап-кап, дощик капає. Кап-кап-кап, дощик капає. Кап-кап-кап, а хмаринка плаче.",
+    "Таблиця множення":"два помножити на два дорівнює чотири, два помножити на три дорівнює шість, два помножити на чотири дорівнює вісім, два помножити на п'ять дорівнює десять, два помножити на шість дорівнює дванадцять."
+  };
+  const isL=ch=>/[A-Za-zА-Яа-яІіЇїЄєҐґ'’0-9]/.test(ch);
+  let orig="",cur="",dict=[];
+  $("#tcPresets").innerHTML=Object.keys(PRE).map(k=>`<button data-p="${k}">${k}</button>`).join("");
+  $$("#tcPresets button").forEach(b=>b.onclick=()=>{$("#tcIn").value=PRE[b.dataset.p];reset();});
+  function reset(){orig=$("#tcIn").value;cur=orig;dict=[];render();msg("");}
+  function best(s){
+    const n=s.length,starts=[],ends=new Set();
+    for(let i=0;i<n;i++)if(isL(s[i])&&(i===0||!isL(s[i-1])))starts.push(i);
+    for(let j=1;j<=n;j++)if(isL(s[j-1])&&(j===n||!isL(s[j])))ends.add(j);
+    let b=null;const seen=new Set();
+    for(const i of starts){for(let j=i+3;j<=Math.min(n,i+60);j++){
+      if(TOK.includes(s[j-1])||/[.,!?:;\n]/.test(s[j-1]))break;
+      if(!ends.has(j))continue;const sub=s.slice(i,j);if(seen.has(sub))continue;seen.add(sub);
+      let c=0,p=0;while((p=s.indexOf(sub,p))!==-1){const okL=p===0||!isL(s[p-1]),okR=p+sub.length===n||!isL(s[p+sub.length]);if(okL&&okR){c++;p+=sub.length;}else p++;}
+      if(c<2)continue;const save=c*(sub.length-1)-(sub.length+2);
+      if(save>0&&(!b||save>b.save||(save===b.save&&sub.length>b.sub.length)))b={sub,c,save};
+    }}
+    return b;
+  }
+  function replaceAll(s,sub,t){let out="",p=0,q;const n=s.length;while((q=s.indexOf(sub,p))!==-1){const okL=q===0||!isL(s[q-1]),okR=q+sub.length===n||!isL(s[q+sub.length]);if(okL&&okR){out+=s.slice(p,q)+t;p=q+sub.length;}else{out+=s.slice(p,q+1);p=q+1;}}return out+s.slice(p);}
+  function size(){return [...cur].length+dict.reduce((a,d)=>a+[...d.sub].length+2,0);}
+  function step(){
+    if(cur!==orig&&!dict.length)return false;
+    if(dict.length>=TOK.length){msg("Словник заповнено.");return false;}
+    const b=best(cur);if(!b){msg(dict.length?"Більше вигідних повторів немає. Стиснення завершено!":"У цьому тексті немає повторів, які вигідно замінити.","good");return false;}
+    const t=TOK[dict.length];cur=replaceAll(cur,b.sub,t);dict.push({t,sub:b.sub,c:b.c});
+    msg(`Знайдено повтор «${b.sub}» (${b.c} ${pl(b.c,"раз","рази","разів")}). Замінюємо на ${t} і економимо ${b.save} символів.`,"good");return true;
+  }
+  function render(){
+    const raw=[...orig].length,now=size(),k=now?raw/now:1;
+    $("#tcRaw").textContent=raw;$("#tcNow").textContent=now;$("#tcK").textContent=nf(k,2);
+    $("#tcKBox").className="stat "+(k>1.001?"good":"");
+    $("#tcOut").innerHTML=esc(cur).replace(/[①-⑨]/g,m=>`<span class="tok">${m}</span>`);
+    $("#tcDict").innerHTML=dict.length?dict.map(d=>`<div><span class="tok">${d.t}</span>= «${esc(d.sub)}» <span class="hint">(${d.c} ${pl(d.c,"раз","рази","разів")})</span></div>`).join(""):`<span class="hint">Поки порожній.</span>`;
+  }
+  function msg(t,c){const e=$("#tcMsg");e.textContent=t;e.className="toast "+(c||"");}
+  $("#tcStep").onclick=()=>{if($("#tcIn").value!==orig)reset();step();render();};
+  $("#tcAll").onclick=()=>{if($("#tcIn").value!==orig)reset();let n=0;while(step())n++;render();};
+  $("#tcUnpack").onclick=()=>{
+    if(!dict.length){msg("Спочатку стисни текст.");return;}
+    let s=cur;for(let i=dict.length-1;i>=0;i--)s=s.split(dict[i].t).join(dict[i].sub);
+    cur=s;dict=[];render();$("#tcOut").classList.remove("flash");void $("#tcOut").offsetWidth;$("#tcOut").classList.add("flash");
+    msg(s===orig?"✓ Текст відновлено точно, символ у символ. Це стиснення без втрат!":"Щось пішло не так.",s===orig?"good":"bad");
+  };
+  $("#tcReset").onclick=reset;
+  $("#tcIn").value=PRE["Пісенька дощу"];reset();
+
+  const rt=()=>{const s=[...$("#rtIn").value];const rs=runs(s);const code=rs.map(r=>r[0]+r[1]).join("");
+    $("#rtOut").textContent=code||" ";const a=s.length,b=[...code].length,v=$("#rtVerdict");
+    if(!a){v.className="verdict";v.textContent="Введи рядок.";return;}
+    if(b<a){v.className="verdict good";v.textContent=`Було ${a} символів, стало ${b}. k = ${nf(a/b,2)}.`;}
+    else if(b>a){v.className="verdict bad";v.textContent=`Було ${a} символів, стало ${b}: код удвічі довший! Повторів немає, тому RLE тут шкодить.`;}
+    else{v.className="verdict";v.textContent=`Було ${a}, стало ${b}: виграшу немає.`;}};
+  $("#rtIn").addEventListener("input",rt);rt();
+}
+
+/* ===== JPEG lab ===== */
+if($("#jpImg")){
+  const src=document.createElement("canvas"),sx=src.getContext("2d");
+  const img=$("#jpImg"),zoom=$("#jpZoom"),zx=zoom.getContext("2d");
+  let fx=.5,fy=.5,pngURL="",holding=false,last="",ready=false;
+  function rnd(seed){return()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};}
+  function demo(){
+    src.width=480;src.height=300;const c=sx,r=rnd(7);
+    let g=c.createLinearGradient(0,0,0,200);g.addColorStop(0,"#3d8ee0");g.addColorStop(1,"#ffd8a0");c.fillStyle=g;c.fillRect(0,0,480,300);
+    g=c.createRadialGradient(370,80,5,370,80,60);g.addColorStop(0,"#fff6c8");g.addColorStop(.35,"#ffd34d");g.addColorStop(1,"rgba(255,211,77,0)");c.fillStyle=g;c.fillRect(300,10,140,140);
+    c.fillStyle="#6c7fa8";c.beginPath();c.moveTo(0,200);c.lineTo(90,110);c.lineTo(160,170);c.lineTo(250,90);c.lineTo(340,180);c.lineTo(420,130);c.lineTo(480,170);c.lineTo(480,300);c.lineTo(0,300);c.fill();
+    c.fillStyle="#fff";c.beginPath();c.moveTo(250,90);c.lineTo(272,113);c.lineTo(258,110);c.lineTo(246,118);c.lineTo(232,108);c.fill();
+    g=c.createLinearGradient(0,190,0,300);g.addColorStop(0,"#5fb85a");g.addColorStop(1,"#2e7d32");c.fillStyle=g;c.fillRect(0,210,480,90);
+    for(let i=0;i<2200;i++){c.fillStyle=`hsl(${90+r()*50},${45+r()*30}%,${22+r()*30}%)`;c.fillRect(r()*480,210+r()*90,1+r()*2,1+r()*3);}
+    for(let i=0;i<18;i++){c.fillStyle=pick(["#ff5a5f","#ffd34d","#ffffff","#b46cff"]);c.beginPath();c.arc(20+r()*440,230+r()*60,2.5,0,7);c.fill();}
+    c.fillStyle="#fff";c.fillRect(24,24,190,52);c.strokeStyle="#1b2433";c.lineWidth=2;c.strokeRect(24,24,190,52);
+    c.fillStyle="#1b2433";c.font="800 22px Nunito, Arial, sans-serif";c.fillText("Інформатика 8",36,52);c.font="600 13px Nunito, Arial, sans-serif";c.fillStyle="#d23b3b";c.fillText("стиснення даних",36,68);
+    for(let i=0;i<14;i++){c.fillStyle=i%2?"#1b2433":"#ffffff";c.fillRect(404+i*4,238,4,40);}
+    c.fillStyle="#e23b3b";c.fillRect(70,160,60,50);c.fillStyle="#7a2b1c";c.beginPath();c.moveTo(62,162);c.lineTo(100,130);c.lineTo(138,162);c.fill();c.fillStyle="#ffe7a0";c.fillRect(82,175,14,14);c.fillStyle="#5b3a1d";c.fillRect(106,180,12,30);
+    fx=.25;fy=.17;
+  }
+  function bytes(u){const b=u.slice(u.indexOf(",")+1);return Math.round(b.length*3/4)-(b.endsWith("==")?2:b.endsWith("=")?1:0);}
+  function lensBox(w,h){const lw=Math.round(w*.125),lh=Math.round(lw*2/3);let x=Math.round(fx*w-lw/2),y=Math.round(fy*h-lh/2);x=Math.max(0,Math.min(w-lw,x));y=Math.max(0,Math.min(h-lh,y));return{x,y,lw,lh};}
+  function drawZoom(from){
+    const w=src.width,h=src.height,{x,y,lw,lh}=lensBox(w,h);
+    zx.imageSmoothingEnabled=false;zx.drawImage(from,x,y,lw,lh,0,0,zoom.width,zoom.height);
+    const L=$("#jpLens");L.style.left=x/w*100+"%";L.style.top=y/h*100+"%";L.style.width=lw/w*100+"%";L.style.height=lh/h*100+"%";
+  }
+  function setStats(){
+    const raw=src.width*src.height*3+54,q=+$("#jpQ").value;
+    const u=src.toDataURL("image/jpeg",q/100),jb=bytes(u);last=u;
+    if(!holding)img.src=u;
+    $("#jpQv").textContent=q;$("#jpRaw").textContent=fmtKB(raw/1024);$("#jpPng").textContent=fmtKB(bytes(pngURL)/1024);
+    $("#jpJpg").textContent=fmtKB(jb/1024);$("#jpK").textContent=nf(raw/jb,1);
+    const v=$("#jpVerdict");
+    v.className="verdict "+(q<25?"bad":"good");
+    v.textContent=q>=90?`Якість ${q}: різниці майже не видно, а файл у ${nf(raw/jb,0)} разів менший, ніж без стиснення.`:q>=50?`Якість ${q}: оком різницю помітити важко. Файл у ${nf(raw/jb,0)} разів менший, ніж без стиснення.`:q>=25?`Якість ${q}: придивись до тексту і тонких смужок. З'являються плями та розмиття.`:`Якість ${q}: видно квадратики 8 × 8 пікселів, кольори «пливуть». Деталі втрачено назавжди.`;
+  }
+  img.onload=()=>drawZoom(img);
+  let raf=0;$("#jpQ").addEventListener("input",()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(setStats);});
+  $("#jpQuick").innerHTML=[100,80,50,20,5,1].map(q=>`<button data-q="${q}">${q}</button>`).join("");
+  $$("#jpQuick button").forEach(b=>b.onclick=()=>{$("#jpQ").value=b.dataset.q;setStats();});
+  function load(){pngURL=src.toDataURL("image/png");ready=true;setStats();}
+  const view=$("#jpView");
+  const aim=e=>{const r=img.getBoundingClientRect();fx=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));fy=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));drawZoom(holding?src:img);};
+  view.addEventListener("pointermove",e=>{if(e.pointerType==="mouse")aim(e);});
+  view.addEventListener("pointerdown",aim);
+  const hold=$("#jpHold");
+  const on=e=>{e.preventDefault();holding=true;img.src=pngURL;hold.textContent="Це оригінал";};
+  const off=()=>{if(!holding)return;holding=false;img.src=last;hold.textContent="Утримуй, щоб побачити оригінал";};
+  hold.addEventListener("pointerdown",on);hold.addEventListener("pointerup",off);hold.addEventListener("pointerleave",off);hold.addEventListener("pointercancel",off);
+  hold.addEventListener("contextmenu",e=>e.preventDefault());
+  $("#jpDemo").onclick=()=>{demo();load();};
+  $("#jpFile").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const u=URL.createObjectURL(f);const im=new Image();
+    im.onload=()=>{const s=Math.min(1,720/im.naturalWidth);src.width=Math.round(im.naturalWidth*s);src.height=Math.round(im.naturalHeight*s);sx.drawImage(im,0,0,src.width,src.height);URL.revokeObjectURL(u);fx=.5;fy=.5;load();};
+    im.onerror=()=>{$("#jpVerdict").className="verdict bad";$("#jpVerdict").textContent="Не вдалося відкрити цей файл. Спробуй інше фото.";};
+    im.src=u;};
+  const start=()=>{if(!ready){demo();load();}};
+  document.addEventListener("panel",e=>{if(e.detail==="jpeg")(document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(start);});
+}
+
+/* ===== archiver simulator ===== */
+if($("#zw")){
+  $("#zwIco").innerHTML=ico("Архіватор 7-Zip");
+  const BASE=[["вірш.txt","txt",48,"Текст"],["програма.py","py",12,"Python"],["малюнок.bmp","bmp",2250,"Малюнок BMP"],["фото.jpg","jpg",3400,"Фото JPEG"],["пісня.mp3","mp3",4100,"Аудіо MP3"],["відео.mp4","mp4",25600,"Відео MP4"]];
+  const FI={txt:"📄",py:"🐍",bmp:"🖼️",jpg:"📸",mp3:"🎵",mp4:"🎬",arc:"🗜️",sfx:"⚙️",vol:"🧩",dir:"📁"};
+  const SAVE={txt:[.69,.71],py:[.66,.69],bmp:[.85,.88],jpg:[.006,.012],mp3:[.005,.01],mp4:[.003,.008]};
+  const LV=[["store","Без стиснення",0],["fast","Швидкий",.9],["normal","Нормальний",1],["ultra","Ультра",1.02]];
+  let items=[],sel=new Set(),uid=0,done=[],why=[];
+  const TASKS=[
+    {t:"Створи архів лише з файлу вірш.txt. У скільки разів він зменшився?",ok:e=>e.type==="create"&&e.a.files.length===1&&e.a.files[0].kind==="txt"&&e.a.level!=="store",w:e=>`Текст зменшився в ${nf(kOf(e.a),1)} раза: у ньому багато повторів.`},
+    {t:"Створи архів лише з файлу фото.jpg. Чи багато місця вдалося зекономити?",ok:e=>e.type==="create"&&e.a.files.length===1&&e.a.files[0].kind==="jpg",w:e=>`Лише ${fmtKB(e.a.orig-e.a.packed)}: JPEG уже стиснутий з втратами, повторів майже немає.`},
+    {t:"Заархівуй малюнок.bmp у форматі 7z з рівнем «Ультра».",ok:e=>e.type==="create"&&e.a.files.some(f=>f.kind==="bmp")&&e.a.fmt==="7z"&&e.a.level==="ultra",w:e=>`BMP зберігає кожен піксель без стиснення, тому архів у ${nf(kOf(e.a),1)} раза менший.`},
+    {t:"Створи архів, захищений паролем.",ok:e=>e.type==="create"&&!!e.a.pass,w:()=>"Без пароля відкрити такий архів не вийде. Не забувай його!"},
+    {t:"Пошта приймає вкладення до 10 МБ. Заархівуй відео.mp4 і розбий архів на томи по 10 МБ.",ok:e=>e.type==="create"&&e.a.files.some(f=>f.kind==="mp4")&&e.a.vol===10240,w:e=>`Отримано томів: ${e.a.parts.length}. Кожен можна надіслати окремим листом.`},
+    {t:"Створи самовидобувний архів (SFX).",ok:e=>e.type==="create"&&e.a.sfx,w:()=>"Він має розширення .exe і розпакує себе навіть там, де немає архіватора."},
+    {t:"Перевір будь-який архів на цілісність.",ok:e=>e.type==="test",w:()=>"Помилок не знайдено: архів не пошкоджено."},
+    {t:"Видобудь файли з архіву, захищеного паролем.",ok:e=>e.type==="extract"&&!!e.a.pass,w:()=>"Розміри файлів збіглися з оригіналами до байта: стиснення без втрат."}
+  ];
+  const kOf=a=>a.orig/a.packed;
+  function reset(){items=BASE.map(b=>({id:++uid,name:b[0],kind:b[1],size:b[2],type:b[3],base:true}));sel.clear();done=[];why=[];render();renderQ();closeDlg();}
+  function emit(e){let ch=false;TASKS.forEach((t,i)=>{if(!done[i]&&t.ok(e)){done[i]=true;why[i]=t.w(e);ch=true;}});if(ch)renderQ();}
+  function renderQ(){
+    const n=done.filter(Boolean).length,cur=TASKS.findIndex((t,i)=>!done[i]);
+    $("#aqList").innerHTML=TASKS.map((t,i)=>`<li class="${done[i]?"ok":i===cur?"cur":""}">${t.t}${done[i]?`<span class="why2">${why[i]}</span>`:""}</li>`).join("");
+    $("#aqScore").textContent=`${n}/${TASKS.length}`;
+    const b=$("#aqBanner");
+    if(cur<0){b.className="qbanner done";b.innerHTML=`<span>🎉 Усі завдання виконано! Ти вмієш створювати архіви, ставити пароль, розбивати на томи, створювати SFX, перевіряти й розпаковувати архіви.</span>`;}
+    else{b.className="qbanner";b.innerHTML=`<span class="k">Завдання ${cur+1}/${TASKS.length}</span><span>${TASKS[cur].t}</span>`;}
+  }
+  function render(){
+    $("#zwBody").innerHTML=items.map(f=>{
+      const isA=f.kind==="arc"||f.kind==="sfx"||f.kind==="vol";
+      const pk=isA&&f.kind!=="vol"?fmtKB(f.packedShow):"";
+      return `<tr class="f${sel.has(f.id)?" sel":""}${f.fresh?" new":""}" data-id="${f.id}" tabindex="0" aria-selected="${sel.has(f.id)}"><td class="n"><span class="fi">${FI[f.kind]||"📄"}</span>${esc(f.name)}${f.a&&f.a.pass?`<span class="lock" title="Захищено паролем">🔒</span>`:""}${f.kind==="dir"?`<span class="sub">${f.list}</span>`:""}</td><td class="num">${fmtKB(f.size)}</td><td class="num hm">${pk}</td><td class="hm">${f.type}</td></tr>`;}).join("");
+    items.forEach(f=>f.fresh=false);
+    $$("#zwBody tr").forEach(tr=>{const t=()=>{const id=+tr.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);render();};tr.onclick=t;tr.onkeydown=e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();t();}};});
+    const s=items.filter(f=>sel.has(f.id));
+    $("#zwSel").textContent=s.length?`Вибрано: ${s.length} · ${fmtKB(s.reduce((a,f)=>a+f.size,0))}`:"Нічого не вибрано. Натисни на рядок, щоб вибрати файл.";
+    $("#zwTot").textContent=`Об'єктів: ${items.length}`;
+  }
+  const dlg=$("#zwDlg"),box=$("#zwBox");
+  function openDlg(h){box.innerHTML=h;dlg.hidden=false;const f=$("input,select,button.pri",box);if(f)f.focus();}
+  function closeDlg(){dlg.hidden=true;box.innerHTML="";}
+  function alertDlg(title,html){openDlg(`<h4>${title}</h4><div class="zw-msg">${html}</div><div class="zw-btns"><button class="pri" id="zOk">ОК</button></div>`);$("#zOk").onclick=closeDlg;}
+  function progress(title,lines,then){
+    openDlg(`<h4>${title}</h4><div class="zw-prog"><span id="zpT">${lines[0]}</span><div class="pbar"><span id="zpB"></span></div></div>`);
+    let p=0;const tm=setInterval(()=>{p+=8;const b=$("#zpB");if(!b){clearInterval(tm);return;}b.style.width=Math.min(100,p)+"%";$("#zpT").textContent=lines[Math.min(lines.length-1,Math.floor(p/100*lines.length))];if(p>=100){clearInterval(tm);setTimeout(then,150);}},60);
+  }
+  const selected=()=>items.filter(f=>sel.has(f.id));
+  function uniq(n){let s=n,i=2;const dot=n.indexOf(".");while(items.some(f=>f.name===s)){s=n.slice(0,dot)+` (${i++})`+n.slice(dot);}return s;}
+  $("#zwAdd").onclick=()=>{
+    const s=selected().filter(f=>BASE.some(b=>b[0]===f.name));
+    if(!s.length){alertDlg("Додати до архіву","Спочатку вибери один або кілька файлів проєкту: натисни на рядок у списку. Архіви та папки в цій моделі повторно не пакуємо.");return;}
+    const stem=s.length===1?s[0].name.replace(/\.[^.]+$/,""):"Проєкт";
+    openDlg(`<h4>➕ Додати до архіву</h4><div class="zw-form">
+      <label>Архів<input type="text" id="zName" value="${esc(stem)}"></label>
+      <div class="two"><label>Формат архіву<select id="zFmt"><option value="7z">7z</option><option value="zip">zip</option></select></label>
+      <label>Рівень стиснення<select id="zLv">${LV.map(l=>`<option value="${l[0]}"${l[0]==="normal"?" selected":""}>${l[1]}</option>`).join("")}</select></label></div>
+      <label>Розбити на томи розміром<select id="zVol"><option value="0">Не розбивати</option><option value="10240">10 МБ (пошта)</option><option value="102400">100 МБ</option></select></label>
+      <label>Пароль<input type="password" id="zPass" placeholder="залиш порожнім, якщо не потрібен" autocomplete="new-password"></label>
+      <label class="ck"><input type="checkbox" id="zSfx"> Створити SFX-архів (самовидобувний .exe)</label>
+      <p class="note2">Файлів: ${s.length}, загальний розмір ${fmtKB(s.reduce((a,f)=>a+f.size,0))}</p>
+      <p class="zw-err" id="zErr"></p></div>
+      <div class="zw-btns"><button id="zCancel">Скасувати</button><button class="pri" id="zGo">ОК</button></div>`);
+    const fmt=$("#zFmt"),sfx=$("#zSfx");
+    fmt.onchange=()=>{if(fmt.value==="zip"){sfx.checked=false;sfx.disabled=true;}else sfx.disabled=false;};
+    sfx.onchange=()=>{if(sfx.checked){fmt.value="7z";}};
+    $("#zCancel").onclick=closeDlg;
+    $("#zGo").onclick=()=>{
+      const nm=$("#zName").value.trim().replace(/[\\/:*?"<>|]/g,"");if(!nm){$("#zErr").textContent="Введи ім'я архіву.";return;}
+      if(+$("#zVol").value&&sfx.checked){$("#zErr").textContent="У цій моделі SFX-архів не можна розбити на томи. Вибери щось одне.";return;}
+      create(s,{name:nm,fmt:fmt.value,level:$("#zLv").value,vol:+$("#zVol").value,pass:$("#zPass").value,sfx:sfx.checked});
+    };
+  };
+  function create(files,o){
+    const lv=LV.find(l=>l[0]===o.level)[2],fi=o.fmt==="7z"?1:0;
+    const orig=files.reduce((a,f)=>a+f.size,0);
+    let packed=files.reduce((a,f)=>a+f.size*(1-Math.min(.97,SAVE[f.kind][fi]*lv))+.15,0)+.1;
+    if(o.pass)packed+=.05*files.length;
+    const show=packed;if(o.sfx)packed+=210;
+    const a={files:files.map(f=>({name:f.name,kind:f.kind,size:f.size})),fmt:o.fmt,level:o.level,vol:o.vol,pass:o.pass,sfx:o.sfx,orig,packed:show,parts:[]};
+    progress("Створення архіву",files.map(f=>`Стиснення: ${f.name}`),()=>{
+      const ext=o.sfx?".exe":"."+o.fmt;const gid=++uid;
+      if(o.vol&&packed>o.vol){
+        const n=Math.ceil(packed/o.vol),base=uniq(o.name+ext+".001").replace(/\.001$/,"");
+        for(let i=0;i<n;i++){const sz=i<n-1?o.vol:packed-o.vol*(n-1);const it={id:++uid,name:base+"."+String(i+1).padStart(3,"0"),kind:"vol",size:sz,type:`Том ${i+1} з ${n}`,a,gid,fresh:true};a.parts.push(it);items.push(it);}
+      }else{
+        const it={id:++uid,name:uniq(o.name+ext),kind:o.sfx?"sfx":"arc",size:packed,packedShow:show,type:o.sfx?"SFX-архів":`Архів ${o.fmt.toUpperCase()}`,a,fresh:true};a.parts.push(it);items.push(it);
+      }
+      sel.clear();render();
+      const k=orig/show,allPacked=files.every(f=>["jpg","mp3","mp4"].includes(f.kind));
+      const tip=o.level==="store"?"Рівень «Без стиснення» лише збирає файли в один архів, нічого не стискаючи.":allPacked?"Файл майже не зменшився: формати JPEG, MP3 і MP4 уже стиснуті з втратами.":files.some(f=>f.kind==="bmp")?"Малюнок BMP зберігає кожен піксель окремо, тому стискається дуже добре.":"Текст і програми мають багато повторів, тому добре стискаються.";
+      alertDlg("✅ Архів створено",`<span>${a.parts.length>1?`${a.parts.length} томи: ${esc(a.parts[0].name)} … ${esc(a.parts[a.parts.length-1].name)}`:esc(a.parts[0].name)}</span><span class="big3">${fmtKB(orig)} → ${fmtKB(show)}</span><span>Коефіцієнт стиснення k = ${nf(k,k<1.1?2:1)}</span>${o.sfx?`<span>До архіву додано модуль розпакування (≈ 210 КБ), тому файл .exe трохи більший.</span>`:""}<span>${tip}</span>`);
+      emit({type:"create",a});
+    });
+  }
+  function oneArchive(){const s=selected();if(s.length!==1||!s[0].a){alertDlg("Потрібен архів","Вибери <b>один</b> архів у списку (рядок зі значком 🗜️, ⚙️ або 🧩).");return null;}return s[0];}
+  function withPass(it,title,then){
+    if(!it.a.pass){then();return;}
+    openDlg(`<h4>🔒 ${title}</h4><div class="zw-form"><label>Введи пароль для «${esc(it.name)}»<input type="password" id="zP" autocomplete="off"></label><p class="zw-err" id="zErr"></p></div><div class="zw-btns"><button id="zCancel">Скасувати</button><button class="pri" id="zGo">ОК</button></div>`);
+    $("#zCancel").onclick=closeDlg;
+    const go=()=>{if($("#zP").value===it.a.pass)then();else{$("#zErr").textContent="Неправильний пароль. Спробуй ще раз.";$("#zP").select();}};
+    $("#zGo").onclick=go;$("#zP").onkeydown=e=>{if(e.key==="Enter")go();};
+  }
+  function partsOk(it){const miss=it.a.parts.filter(p=>!items.includes(p));if(miss.length){alertDlg("Помилка","Не вистачає тому <b>"+esc(miss[0].name)+"</b>. Багатотомний архів можна розпакувати лише тоді, коли є всі його частини.");return false;}return true;}
+  $("#zwExt").onclick=()=>{const it=oneArchive();if(!it||!partsOk(it))return;
+    withPass(it,"Видобути",()=>progress("Видобування",it.a.files.map(f=>`Розпакування: ${f.name}`),()=>{
+      const nm=uniq(it.a.parts[0].name.replace(/\.(7z|zip|exe)(\.\d{3})?$/,"")+"_розпаковано");
+      items.push({id:++uid,name:nm,kind:"dir",size:it.a.orig,type:"Папка",list:it.a.files.map(f=>`${f.name} (${fmtKB(f.size)})`).join(", "),fresh:true});sel.clear();render();
+      alertDlg("✅ Файли видобуто",`<span>Створено папку <b>${esc(nm)}</b>.</span><span>Файлів: ${it.a.files.length}, разом ${fmtKB(it.a.orig)}. Розміри точно збігаються з оригіналами: архіватор стискає без втрат.</span>${it.kind==="sfx"?`<span>SFX-архів можна було б просто запустити, і він розпакував би себе сам.</span>`:""}`);
+      emit({type:"extract",a:it.a});}));};
+  $("#zwTest").onclick=()=>{const it=oneArchive();if(!it||!partsOk(it))return;
+    withPass(it,"Перевірити",()=>progress("Перевірка архіву",it.a.files.map(f=>`Перевірка: ${f.name}`),()=>{
+      sel.clear();render();alertDlg("Перевірку завершено",`<span class="big3">Помилок не знайдено</span><span>Файлів: ${it.a.files.length}. Розмір: ${fmtKB(it.a.orig)}. Стиснуто: ${fmtKB(it.a.packed)}.</span>`);emit({type:"test",a:it.a});}));};
+  $("#zwInfo").onclick=()=>{const s=selected();if(s.length!==1){alertDlg("Інфо","Вибери один об'єкт у списку.");return;}const f=s[0];
+    if(!f.a){alertDlg("ℹ️ "+esc(f.name),`<span>Тип: ${f.type}</span><span>Розмір: ${fmtKB(f.size)}</span>${f.list?`<span>Вміст: ${esc(f.list)}</span>`:""}`);return;}
+    const a=f.a;alertDlg("ℹ️ "+esc(f.name),`<span>Формат: ${a.fmt.toUpperCase()}${a.sfx?" (SFX)":""} · рівень: ${LV.find(l=>l[0]===a.level)[1]}</span><span>Файли: ${a.files.map(x=>esc(x.name)).join(", ")}</span><span>Розмір файлів: ${fmtKB(a.orig)} · стиснуто: ${fmtKB(a.packed)}</span><span>k = ${nf(kOf(a),kOf(a)<1.1?2:1)}</span><span>Пароль: ${a.pass?"так 🔒":"ні"}${a.parts.length>1?` · томів: ${a.parts.length}`:""}</span>`);};
+  $("#zwDel").onclick=()=>{const s=selected();if(!s.length){alertDlg("Видалити","Вибери, що видалити.");return;}
+    if(s.some(f=>f.base)){alertDlg("Видалити","Оригінальні файли проєкту в цій моделі не видаляємо. Видалити можна архіви та розпаковані папки.");return;}
+    items=items.filter(f=>!sel.has(f.id));sel.clear();render();};
+  $("#zwReset").onclick=reset;
+  dlg.addEventListener("keydown",e=>{if(e.key==="Escape")closeDlg();});
+  reset();
+}
+
+/* ===== sort: lossless / lossy ===== */
+const SORT=[
+  ["📄","Реферат у форматі DOCX","ll","Текст має відновитися до кожної літери."],
+  ["📸","Фото у форматі JPEG","ly","JPEG відкидає дрібні деталі, які людина майже не помічає."],
+  ["🎵","Пісня у форматі MP3","ly","MP3 відкидає звуки, які вухо майже не чує."],
+  ["🗜️","Архів ZIP","ll","Архіватор відновлює файли точно, до біта."],
+  ["🖼️","Скриншот у форматі PNG","ll","PNG стискає без втрат, тому текст на скриншоті чіткий."],
+  ["🎬","Відео на YouTube","ly","Відео стискають з втратами, інакше воно займало б десятки гігабайтів."],
+  ["💾","Програма (файл .exe)","ll","Якщо змінити хоч один байт, програма не запуститься."],
+  ["📊","Таблиця з оцінками","ll","Оцінки мають залишитися точно такими самими."],
+  ["🎙️","Голосове повідомлення в месенджері","ly","Голос стискають з втратами, щоб повідомлення швидко надсилалося."],
+  ["🎼","Музика у форматі FLAC","ll","FLAC зберігає звук без втрат, для тих, хто любить якісний звук."],
+  ["📹","Відеодзвінок","ly","Під час дзвінка відео сильно стискають, щоб воно встигало передаватися."],
+  ["🐍","Код програми на Python","ll","У програмі важливий кожен символ."]
+];
+let sortMist=0,sortDoneFlag=false;
+if($("#fcard")){
+  let order=[],si=0,busy=false;
+  const nextTab=$("#sortBody").dataset.next||"coef";
+  function sInit(){order=shuffle(SORT);si=0;sortMist=0;sortDoneFlag=false;$("#sortBody").hidden=false;$("#sortDone").hidden=true;sCard();}
+  function sCard(){const it=order[si];$("#sortProg").style.width=si/order.length*100+"%";
+    $("#fcard").className="fcard";$("#fcard").innerHTML=`<span class="fc-count">${si+1}/${order.length}</span><div class="fc-emo" aria-hidden="true">${it[0]}</div><div class="fc-name">${it[1]}</div>`;$("#sortToast").textContent="";$("#sortToast").className="toast";}
+  $$("#sortBody .kbtn").forEach(b=>b.onclick=()=>{
+    if(busy)return;const it=order[si],t=$("#sortToast");
+    if(b.dataset.cat===it[2]){busy=true;$("#fcard").classList.add("right");t.className="toast good";t.textContent="Правильно! "+it[3];
+      setTimeout(()=>{busy=false;si++;if(si<order.length)sCard();else sFinish();},1300);}
+    else{sortMist++;const c=$("#fcard");c.classList.remove("wrong");void c.offsetWidth;c.classList.add("wrong");t.className="toast bad";t.textContent="Подумай ще. Чи можна тут втратити частину даних?";}
+  });
+  function sFinish(){sortDoneFlag=true;$("#sortProg").style.width="100%";$("#sortBody").hidden=true;const d=$("#sortDone");d.hidden=false;
+    d.innerHTML=`<div class="final"><p class="eyebrow">Вправу виконано</p><div class="big">${Math.max(0,SORT.length-sortMist)} / ${SORT.length}</div><p class="lead">${sortMist?`Помилок: ${sortMist}. `:"Жодної помилки! "}Запам'ятай: усе, де важливий кожен символ, стискають без втрат.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn ghost" id="sAgain">Пройти ще раз</button><button class="btn" data-go="${nextTab}">Далі →</button></div></div>`;
+    $("#sAgain").onclick=sInit;}
+  sInit();
+}
+
+/* ===== coefficient problems ===== */
+let cfScore=0,cfDone=false,cfN=0;
+if($("#cfBox")){
+  const box=$("#cfBox");cfN=+(box.dataset.n||6);
+  const GEN={
+    k(){const k=pick([2,3,4,5,6,8,10]),v1=pick([2,3,4,5,6,8,12]),v0=v1*k;return{q:`Файл обсягом ${v0} МБ стиснули до ${v1} МБ. Обчисли коефіцієнт стиснення k.`,a:k,u:"",s:`k = ${v0} : ${v1} = ${k}`};},
+    units(){const v0=pick([1,2,3,4]),k=pick([4,8,16]),v1=v0*1024/k;return{q:`Документ займає ${v0} МБ, а архів із ним — ${v1} КБ. Обчисли коефіцієнт стиснення k.`,a:k,u:"",s:`${v0} МБ = ${v0*1024} КБ; k = ${v0*1024} : ${v1} = ${k}`};},
+    v1(){const k=pick([2,3,4,6]),v1=pick([4,5,6,8,10,12]),v0=v1*k;return{q:`Файл обсягом ${v0} МБ стиснули з коефіцієнтом k = ${k}. Який обсяг архіву?`,a:v1,u:"МБ",s:`V стиснутого = ${v0} : ${k} = ${v1} МБ`};},
+    v0(){const k=pick([2,3,4,5]),v1=pick([3,5,7,12,15]);return{q:`Архів займає ${v1} МБ, коефіцієнт стиснення k = ${k}. Який обсяг вихідного файлу?`,a:v1*k,u:"МБ",s:`V вихідного = ${v1} · ${k} = ${v1*k} МБ`};},
+    pct(){const p=pick([50,25,20,10,40]),k=100/p;return{q:`Архів займає ${p} % від обсягу вихідного файлу. Чому дорівнює коефіцієнт стиснення k?`,a:k,u:"",s:`k = 100 % : ${p} % = ${nf(k,2)}`};},
+    cmp(){const [x,y]=shuffle([30,24,20,40]).slice(0,2),b=Math.min(x,y);return{q:`Файл обсягом 120 МБ стиснули двома архіваторами. Перший створив архів ${x} МБ, другий — ${y} МБ. Обчисли k того архіватора, який стиснув краще.`,a:120/b,u:"",s:`Краще стиснув той, чий архів менший (${b} МБ): k = 120 : ${b} = ${nf(120/b,2)}`};}
+  };
+  let list=[],ci=0;
+  function cInit(){const ks=Object.keys(GEN);list=shuffle(ks).slice(0,Math.min(cfN,ks.length)).map(k=>GEN[k]());while(list.length<cfN)list.push(GEN.k());ci=0;cfScore=0;cfDone=false;if($("#cfNext"))$("#cfNext").hidden=true;cRender();}
+  function cRender(){
+    if(ci>=list.length){cfDone=true;if($("#cfNext"))$("#cfNext").hidden=false;
+      box.innerHTML=`<div class="final"><p class="eyebrow">Результат</p><div class="big">${cfScore} / ${list.length}</div><p class="lead">${cfScore===list.length?"Усі задачі розв'язано правильно!":"Переглянь розв'язання і спробуй нові задачі."}</p><button class="btn ghost" id="cfAgain">Нові задачі</button></div>`;$("#cfAgain").onclick=cInit;return;}
+    const P=list[ci];
+    box.innerHTML=`<div class="cf" id="cfCard"><div class="bar-row"><p class="eyebrow">Задача ${ci+1} з ${list.length}</p><span class="score">Правильно: ${cfScore}</span></div><p class="q2">${P.q}</p>
+      <div class="cf-in"><input id="cfIn" inputmode="decimal" autocomplete="off" aria-label="Відповідь" placeholder="відповідь">${P.u?`<span class="u">${P.u}</span>`:""}<button class="btn" id="cfGo">Перевірити</button></div><div id="cfRes"></div></div>`;
+    const go=()=>{const v=parseFloat($("#cfIn").value.replace(",",".").replace(/\s/g,""));if(isNaN(v)){$("#cfRes").innerHTML=`<p class="toast bad">Введи число.</p>`;return;}
+      const ok=Math.abs(v-P.a)<0.01;if(ok)cfScore++;$("#cfIn").disabled=true;$("#cfGo").remove();
+      $("#cfCard").classList.add(ok?"right":"wrong");
+      $("#cfRes").innerHTML=`<div style="display:grid;gap:10px"><p class="toast ${ok?"good":"bad"}">${ok?"Правильно!":`Неправильно. Відповідь: ${nf(P.a,2)}${P.u?" "+P.u:""}.`}</p><p class="sol">${P.s}</p><div><button class="btn" id="cfNx">${ci+1<list.length?"Наступна задача →":"Показати результат"}</button></div></div>`;
+      $("#cfNx").onclick=()=>{ci++;cRender();};$("#cfNx").focus();};
+    $("#cfGo").onclick=go;$("#cfIn").onkeydown=e=>{if(e.key==="Enter")go();};
+  }
+  cInit();
+}
+
+/* ===== pairs ===== */
+const PAIRS=[["compression","стиснення"],["archive","архів"],["archiver","архіватор"],["extract","видобути, розпакувати"],["lossless","без втрат"],["lossy","з втратами"],["compression ratio","коефіцієнт стиснення"],["password","пароль"],["self-extracting archive","самовидобувний архів"]];
+let pSel=null,pDone=0,pMiss=0;
+if($("#pEn")){
+  function pInit(){
+    pSel=null;pDone=0;pMiss=0;$("#pNext").hidden=true;
+    $("#pEn").innerHTML=shuffle(PAIRS).map(p=>`<button class="pb en" data-k="${p[0]}">${p[0]}</button>`).join("");
+    $("#pUa").innerHTML=shuffle(PAIRS).map(p=>`<button class="pb ua" data-k="${p[0]}">${p[1]}</button>`).join("");
+    $$("#pEn .pb").forEach(b=>b.onclick=()=>{if(b.disabled)return;$$("#pEn .pb").forEach(x=>x.classList.remove("sel"));pSel=b;b.classList.add("sel");pMsg("Тепер обери переклад праворуч.");});
+    $$("#pUa .pb").forEach(b=>b.onclick=()=>{
+      if(b.disabled)return;if(!pSel){pMsg("Спочатку натисни англійське слово ліворуч.");return;}
+      if(b.dataset.k===pSel.dataset.k){[b,pSel].forEach(x=>{x.classList.remove("sel","wrong");x.classList.add("right");x.disabled=true;});pDone++;pMsg(`${pSel.textContent} — ${b.textContent}. Правильно!`,"good");pSel=null;
+        if(pDone===PAIRS.length){pMsg(pMiss===0?"Усі пари знайдено без жодної помилки!":`Усі пари знайдено! Помилок: ${pMiss}.`,"good");$("#pNext").hidden=false;}}
+      else{pMiss++;b.classList.remove("wrong");void b.offsetWidth;b.classList.add("wrong");setTimeout(()=>b.classList.remove("wrong"),600);pMsg("Не та пара. Спробуй ще.","bad");}
+      pScore();});
+    pMsg("");pScore();
+  }
+  function pMsg(t,c){const e=$("#pMsg");e.textContent=t;e.className="toast "+(c||"");}
+  function pScore(){$("#pScore").textContent=`${pDone}/${PAIRS.length} · помилок: ${pMiss}`;}
+  $("#pReset").onclick=pInit;
+  pInit();
+}
+
+/* ===== quiz ===== */
+const QUIZ_SETS={
+ lesson:[
+  {q:"Стиснення даних — це…",o:["Перетворення даних, у результаті якого зменшується їхній обсяг","Видалення непотрібних файлів","Копіювання файлів на флешку","Перейменування файлу"],a:0,e:"Стиснення зменшує обсяг даних, а розпакування повертає їх у вихідний вигляд."},
+  {q:"Чому дані взагалі можна стиснути?",o:["Бо комп'ютер видаляє зайві файли","Бо в даних є повтори та надлишковість","Бо файли завжди наполовину порожні","Бо інтернет працює швидко"],a:1,e:"Програма знаходить повтори і записує їх коротше."},
+  {q:"Що означає стиснення без втрат?",o:["Файл стає вдвічі меншим","Частину деталей відкинуто","Після розпакування дані відновлюються точно, до біта","Файл не можна відкрити без пароля"],a:2,e:"Так стискають тексти, програми та архіви."},
+  {q:"Який формат використовує стиснення з втратами?",o:["ZIP","PNG","7Z","MP3"],a:3,e:"MP3 відкидає звуки, які вухо майже не чує. ZIP, PNG і 7Z стискають без втрат."},
+  {q:"Файл 20 МБ стиснули до 5 МБ. Який коефіцієнт стиснення?",o:["4","15","0,25","25"],a:0,e:"k = 20 : 5 = 4."},
+  {q:"Чому фото JPEG майже не зменшується в архіві?",o:["Архіватор не працює з фото","Фото занадто мале","Потрібно поставити пароль","Воно вже стиснуте"],a:3,e:"У стиснутому файлі майже не залишилося повторів."},
+  {q:"Який RLE-код має рядок пікселів ББББЧЧЧБ?",o:["Б4Ч3Б1","4Б3Ч1Б","8Б","4Б4Ч"],a:1,e:"Чотири білі, три чорні, один білий: 4Б3Ч1Б."},
+  {q:"Архів — це…",o:["Програма для стиснення файлів","Папка Кошик","Файл, що містить один або кілька стиснутих файлів і відомості про них","Будь-який старий файл"],a:2,e:"А програма для роботи з архівами — це архіватор."},
+  {q:"Самовидобувний (SFX) архів — це…",o:["Архів .exe, що розпаковує себе без архіватора","Архів, що сам себе видаляє","Архів, розбитий на частини","Архів без файлів"],a:0,e:"До архіву додано невеликий модуль розпакування."},
+  {q:"Незнайомець надіслав архів із файлом «гра.exe». Що робити?",o:["Одразу запустити гру","Не відкривати, перевірити антивірусом і порадитися з дорослими","Переслати всім друзям","Вимкнути антивірус і запустити"],a:1,e:"В архівах часто ховають віруси, особливо у файлах .exe."}
+ ],
+ home:[
+  {q:"Навіщо стискають дані?",o:["Щоб файл став кольоровим","Щоб видалити віруси","Щоб дані займали менше місця і швидше пересилалися","Щоб змінити розширення на .exe"],a:2,e:"Стиснення економить пам'ять і час передавання."},
+  {q:"Яка з цих програм є архіватором?",o:["Paint","7-Zip","Excel","Chrome"],a:1,e:"7-Zip — безкоштовний архіватор. Також відомі WinRAR і PeaZip."},
+  {q:"Який формат стискає без втрат?",o:["JPEG","MP3","MP4","PNG"],a:3,e:"PNG зберігає зображення точно, тому скриншоти з текстом краще зберігати в PNG."},
+  {q:"Архів займає 6 МБ, коефіцієнт стиснення 4. Який обсяг вихідного файлу?",o:["1,5 МБ","24 МБ","10 МБ","2 МБ"],a:1,e:"V вихідного = 6 · 4 = 24 МБ."},
+  {q:"Розшифруй RLE-код «3Ж2С».",o:["ЖЖЖСС","ЖЖССС","ЖСЖСС","ЖЖЖЖС"],a:0,e:"Три жовті, потім дві сині клітинки."},
+  {q:"Що станеться, якщо ще раз стиснути вже стиснутий архів?",o:["Він зменшиться ще в 10 разів","Він майже не зміниться","Він стане розміром 0 байтів","Він зникне"],a:1,e:"Після першого стиснення повторів майже не залишається."},
+  {q:"Як англійською «стиснення без втрат»?",o:["lossy compression","lossless compression","zip compression","extract"],a:1,e:"Less — менше, loss — втрата: lossless означає «без втрат»."},
+  {q:"Що треба зробити, щоб отримати файли з архіву?",o:["Видалити архів","Перейменувати архів","Розпакувати (видобути) їх","Стиснути ще раз"],a:2,e:"В архіваторі для цього є команда «Видобути» або «Розпакувати»."}
+ ]};
+const qbox=$("#quiz");
+const QUIZ=qbox?QUIZ_SETS[qbox.dataset.set||"lesson"]:[];
+let qi=0,qs=0;
+const QNEXT=$("[data-panel=result]")?"result":"practice";
+function quiz(){
+  const box=qbox;
+  if(qi>=QUIZ.length){
+    const msg=qs===QUIZ.length?"Ідеально! Ти справжній знавець архівів.":qs>=QUIZ.length*0.7?"Чудовий результат!":qs>=QUIZ.length*0.4?"Непогано, але варто повторити пояснення.":"Варто ще раз переглянути пояснення.";
+    box.innerHTML=`<div class="final"><p class="eyebrow">Результат</p><div class="big">${qs} / ${QUIZ.length}</div><p class="lead">${msg}</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="qAgain">Пройти ще раз</button><button class="btn ghost" data-go="${QNEXT}">Далі →</button></div></div>`;
+    $("#qAgain").onclick=()=>{qi=0;qs=0;quiz();};return;
+  }
+  const Q=QUIZ[qi];
+  box.innerHTML=`<div class="bar-row"><p class="eyebrow">Вікторина · питання ${qi+1} з ${QUIZ.length}</p><span class="score">Бали: ${qs}</span></div>
+  <div class="progress"><span style="width:${qi/QUIZ.length*100}%"></span></div>
+  <p class="q">${Q.q}</p><div class="opts">${Q.o.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${"ABCD"[i]}</span>${o}</button>`).join("")}</div>
+  <div id="qx"></div>`;
+  $$(".opt",box).forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;$$(".opt",box).forEach(x=>x.disabled=true);
+    $$(".opt",box)[Q.a].classList.add("right");
+    if(i===Q.a)qs++;else b.classList.add("wrong");
+    $("#qx").innerHTML=`<div style="display:grid;gap:12px"><p class="explain"><b style="color:${i===Q.a?"var(--ok)":"var(--bad)"}">${i===Q.a?"Правильно!":"Помилка."}</b> ${Q.e}</p><div><button class="btn" id="qNext">${qi+1<QUIZ.length?"Далі →":"Показати результат"}</button></div></div>`;
+    $("#qNext").onclick=()=>{qi++;quiz();};$("#qNext").focus();
+  });
+}
+if(qbox)quiz();
+
+/* ===== practical ===== */
+const st=$$("#steps input[type=checkbox]");
+function stUpd(){st.forEach(c=>c.closest(".step").classList.toggle("done",c.checked));const n=st.filter(c=>c.checked).length;const e=$("#stScore");if(e)e.textContent=st.length?`Виконано кроків: ${n} з ${st.length}${n===st.length?". Молодець!":""}`:"";}
+st.forEach(c=>c.addEventListener("change",stUpd));stUpd();
+if($("#pSheet")){
+  const F=["текст.txt","малюнок.bmp","малюнок.png","фото.jpg"];
+  $("#pSheet tbody").innerHTML=F.map(f=>`<tr><td><b>${f}</b></td><td><input class="num" inputmode="decimal" aria-label="Розмір ${f}, КБ"></td><td><input class="num" inputmode="decimal" aria-label="Розмір архіву ${f}, КБ"></td><td class="res">—</td></tr>`).join("");
+  const num=v=>parseFloat(String(v).replace(",",".").replace(/\s/g,""));
+  const calc=()=>{let best=null;$$("#pSheet tbody tr").forEach((tr,i)=>{const [a,b]=$$("input",tr).map(x=>num(x.value));const td=$(".res",tr);
+    if(a>0&&b>0){const k=a/b;td.textContent=nf(k,2);if(!best||k>best[1])best=[F[i],k];}else td.textContent="—";});
+    $("#pConcl").textContent=best?`Найкраще стиснувся файл ${best[0]} (k = ${nf(best[1],2)}).`:"";};
+  $$("#pSheet input").forEach(i=>i.addEventListener("input",calc));
+}
+
+/* ===== homework result ===== */
+function result(){
+  const rows=[
+    ["Без втрат чи з втратами?",sortDoneFlag?Math.max(0,SORT.length-sortMist):null,SORT.length,sortDoneFlag?`помилок: ${sortMist}`:""],
+    ["Розшифруй малюнок",typeof PUZ_TOTAL!=="undefined"&&puzSolved>=PUZ_TOTAL?puzFirst:null,typeof PUZ_TOTAL!=="undefined"?PUZ_TOTAL:2,puzSolved?`з першої спроби: ${puzFirst}`:""],
+    ["Коефіцієнт стиснення",cfDone?cfScore:null,cfN,""],
+    ["Словничок",pDone===PAIRS.length?Math.max(0,PAIRS.length-pMiss):null,PAIRS.length,`помилок: ${pMiss}`],
+    ["Вікторина",qi>=QUIZ.length?qs:null,QUIZ.length,""]];
+  const done=rows.filter(r=>r[1]!==null).length,got=rows.reduce((a,r)=>a+(r[1]||0),0),max=rows.reduce((a,r)=>a+r[2],0);
+  let nm="";try{nm=localStorage.getItem("dz-name")||""}catch(e){}
+  $("#result").innerHTML=`<div><p class="eyebrow">Мій результат</p><h2>${done===rows.length?"Усі вправи виконано!":`Виконано вправ: ${done} з ${rows.length}`}</h2></div>
+    <div style="display:grid;gap:6px"><label class="hint" for="dzName">Твоє ім'я та прізвище</label><input id="dzName" class="name-in" placeholder="напр. Олена Коваль" autocomplete="name"></div>
+    <div class="tbl"><table class="sheet"><thead><tr><th>Вправа</th><th>Бали</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td class="res">${r[1]===null?`<span style="color:var(--muted);font-weight:600">ще не пройдено</span>`:`${r[1]} / ${r[2]}`+(r[3]?` <span class="hint" style="font-weight:600">(${r[3]})</span>`:"")}</td></tr>`).join("")}</tbody></table></div>
+    <div class="big">${got} / ${max}</div>
+    <p class="lead">${done===rows.length?"Молодець! Не забудь здати роботу.":"Пройди решту вправ, а потім повернись сюди."}</p>
+    <p class="def" style="font-weight:600">📸 <b>Як здати домашню роботу:</b> зроби скриншот цього екрана і надішли його вчителю. Або збережи скриншот і покажи вчителю на наступному уроці.</p>`;
+  $("#dzName").value=nm;
+  $("#dzName").oninput=e=>{try{localStorage.setItem("dz-name",e.target.value)}catch(_){}};
+}
+if($("#result"))document.addEventListener("panel",e=>{if(e.detail==="result")result();});
+show((location.hash||"").slice(1)||FIRST);
+})();
+
+</script>
+
+
+
+</body></html>
